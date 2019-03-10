@@ -42,28 +42,7 @@ var lastBlockNumber = startBlockNumber;
 // }); 
 
 
-const assetID = "0x70800000000001b8000000000000000000000000000000000000000000000000";
-//contract.methods.typeData(assetID).call()
-//.then(console.log);
 
-getTypeData(assetID)
-.then(function(item) {
-    //console.log(assetID.slice(2,18), assetName, assetMeltValue, assetTotalSupply, assetCirculatingSupply, assetTransferFeeData, assetMeltFeeRatio, assetCreator)
-    var newAssetDocument = {
-        "assetID" : assetID,
-        "name" : item._name,
-        "meltValue" : item._meltValue/1000000000000000000,
-        "totalSupply" : item._totalSupply,
-        "circulatingSupply" : item._circulatingSupply,
-        "transferFeeData" : item._transferFeeData,
-        "meltFeeRatio" : item._meltFeeRatio,
-        "creator" : item._creator
-    }
-    console.log(newAssetDocument);
-    var db = client.db('mzkz');
-    db.collection("erc1155_assets").insertOne(newAssetDocument);
-
-});
 
 
 // wait getURI(assetID)
@@ -86,7 +65,30 @@ function connectToDBB(client) {
 	client.connect( function (err, client) {
 		if (err) throw err;
         //watchCollection();
-		//startWatching();
+        //startWatching();
+        
+        const assetID = "0x70800000000001b8000000000000000000000000000000000000000000000000";
+        //contract.methods.typeData(assetID).call()
+        //.then(console.log);
+
+        getTypeData(assetID)
+        .then(function(item) {
+            //console.log(assetID.slice(2,18), assetName, assetMeltValue, assetTotalSupply, assetCirculatingSupply, assetTransferFeeData, assetMeltFeeRatio, assetCreator)
+            var newAssetDocument = {
+                "assetID" : assetID,
+                "name" : item._name,
+                "meltValue" : item._meltValue/1000000000000000000,
+                "totalSupply" : item._totalSupply,
+                "circulatingSupply" : item._circulatingSupply,
+                "transferFeeData" : item._transferFeeData,
+                "meltFeeRatio" : item._meltFeeRatio,
+                "creator" : item._creator
+            }
+            console.log(newAssetDocument);
+            var db = client.db('mzkz');
+            db.collection("erc1155_assets").insertOne(newAssetDocument);
+
+        });
 
 	  }); 
 };
