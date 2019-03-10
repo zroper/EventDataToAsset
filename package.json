@@ -1,0 +1,17 @@
+{
+  "name": "eventdatatoasset",
+  "version": "1.0.0",
+  "description": "Retrieves, parses, and updates ERC1155 event data",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "zroper",
+  "license": "ISC",
+  "dependencies": {
+    "fs": "0.0.1-security",
+    "manager": "^1.0.9",
+    "mongodb": "^3.1.13",
+    "web3": "^1.0.0-beta.48"
+  }
+}
