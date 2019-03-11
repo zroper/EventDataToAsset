@@ -38,20 +38,81 @@ var lastBlockNumber = startBlockNumber;
 
 // Application begins here
 connectToDBB(client,db);
-//watchCollection();
 
 function connectToDBB(client) {
 	client.connect( function (err, client) {
 		if (err) throw err;
-        //startWatching();
-        getParseUpdate(assetID);
+        startWatching();
+        //getParseUpdate(assetID);
         
 
 
 	  }); 
 };
 
-const assetID = "0x70800000000001b8000000000000000000000000000000000000000000000000";
+//const assetID = "0x70800000000001b8000000000000000000000000000000000000000000000000";
+
+async function createAssetParser(events) {
+	let counter = 0;
+		
+	for (let i=0; i<events.length; i++) {
+        let eventObj = events[i];
+        //perform actions on the collection object
+		let assetID = eventObj.topics[1];
+		let blockNumber = eventObj.blockNumber;
+		let uriJSON = await getURI(assetID);
+		console.log(uriJSON);
+		let typeData = await getTypeData(assetID);
+		console.log(typeData);
+		// let currBlockNumber = await getCurrBlockNumber();
+		
+		// if (blockNumber == 0) {
+		// 	blockNumber = currBlockNumber;
+		// };
+	
+		var options = {
+			uri: uriJSON,
+			json: true // Automatically stringifies the body to JSON
+		};
+		 
+		rp(options)
+		.then(function (assetJSON) {
+				// Request succeeded...
+				assetJSON = assetJSON;
+				URIassetName = assetJSON.name;
+				URIassetImageURL = assetJSON.image;
+				URIassetDescription = assetJSON.description;
+				URIassetProperties = assetJSON.properties;  
+						
+				var newAssetDocument = {
+					"assetID" : assetID.slice(2,18),
+					"assetIndex" : assetID.slice(51,66),
+					"assetIDfull" : assetID,
+					"name" : typeData._name,
+					"meltValue" : typeData._meltValue/1000000000000000000,
+					"totalSupply" : parseInt(typeData._totalSupply),
+					"circulatingSupply" : parseInt(typeData._circulatingSupply),
+					"transferFeeData" : typeData._transferFeeData.map(Number),
+					"meltFeeRatio" : parseInt(typeData._meltFeeRatio),
+					"creator" : typeData._creator,
+					"nonFungible" : typeData._nonFungible,
+					"lastUpdatedAtBlock" : blockNumber
+				};
+				
+				console.log(newAssetDocument);
+				var db = client.db('mzkz');
+				db.collection("erc1155_assets").insertOne(newAssetDocument);
+			})
+		.catch(function (err) {
+			// request failed...
+			console.log("get JSON call failed. The document was not updated");
+		});
+
+		counter++;
+	}
+    
+	console.log("Made ( " + counter + " / " + events.length + " ) updates to " + collection);
+};
 
 async function getParseUpdate(assetID, blockNumber = 0) {
     
@@ -149,9 +210,10 @@ async function watchEvents() {
 
 		//Write to database here
 		eventsCreate.then(function(events) {
-			var collection = "erc1155Events_create";
+			//var collection = "erc1155Events_create";
 			//console.log(events)
-			//updateDDBFromEvents(db,collection,events);
+            //updateDDBFromEvents(db,collection,events);
+            createAssetParser(events)
 		 });
 		
 		eventsMelt.then(function(events) {
@@ -230,7 +292,6 @@ async function watchEvents() {
 function updateDDBFromEvents(db,collection,events) {
 	let counter = 0;
 	var db = client.db('mzkz');
-	//let petShopTable = 'pet-shop'
 	
 	for (let i=0; i<events.length; i++) {
         let eventObj = events[i];
