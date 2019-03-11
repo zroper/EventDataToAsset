@@ -6,7 +6,7 @@
 */
 
 const abi = require('./contract_abi.json');
-const request = require('request');
+const getJSON = require('get-json');
 const rp = require('request-promise');
 const Web3 = require('web3');
 const fs = require('fs');
@@ -53,45 +53,55 @@ const knownHostlist = [
 ];
 
 const JSONtemplates = [{
-	"BitcoinHodler" : {
+		org : "Bitcoin Hodler",
 		slug : "bitcoin-hodler.net",
+		category : "Games > bitcoin-hodler",
+		tags : ["ERC-1155"],
 		id : "1880000000000243",
 		id_start : 2,
 		id_stop : 18,
 		index : "0000000000000001"
-	}},
+	},
 	{
-	"WarOfCrypto" : {
+		org : "War of Crypto",
 		slug : "crypto-site",
+		category : "Games > woc",
+		tags : ["ERC-1155"],
 		id : "00800000000001e90000000000000001",
 		id_start : 2,
 		id_stop : 18,
 		index : ""
-	}},
+	},
 	{
-	"CatsInMechs" : {
-		slug: "omegatechgame.com",
+		org : "Cats in Mechs",
+		slug : "omegatechgame.com",
+		category : "Games > cim",
+		tags : ["ERC-1155"],
 		id : "10800000000000e0000000000000000000000000000000000000000000000000",
 		id_start : 2,
 		id_stop : 66,
 		index : "00000000000000000000000000000001"
-	}},
+	},
 	{
-	"Flurbo" : {
+		org : "Flurbo Billy Bird",
 		slug : "Flurbo.xyz",
+		category : "Community Tokens",
+		tags : ["ERC-1155"],
 		id : "7880000000000226",
 		id_start : 2,
 		id_stop : 18,
 		index : "0000000000000001"
-	}},
+	},
 	{
-	"Enjin" : {
+		org : "Enjin Mintshop",
 		slug : "enjin.io",
+		category : "Enjin Platform",
+		tags : ["ERC-1155"],
 		id : "1880000000000243",
 		id_start : 2,
 		id_stop : 18,
 		index : ""
-	}}
+	}
 ]
 
 // Application begins here
@@ -203,7 +213,7 @@ async function setURIparser(events) {
 		let assetID = eventObj.topics[1];
 		let blockNumber = eventObj.blockNumber;
 		let uriJSON = await getURI(assetID);
-		let [poptURI, isJSONRecognizedByURI] = populateURI(uriJSON, assetID);
+		let [poptURI, isJSONRecognizedByURI, assetHost] = populateURI(uriJSON, assetID);
 		//console.log(uriJSON);
 		let typeData = await getTypeData(assetID);
 		//console.log(typeData);
@@ -237,6 +247,9 @@ async function setURIparser(events) {
 					"creator" : typeData._creator,
 					"nonFungible" : typeData._nonFungible,
 					"URI" : uriJSON,
+					"popURI" : poptURI,
+					"isRecognizedByURI" : isJSONRecognizedByURI,
+					"Host" : assetHost,
 					"nameFromURI" : URIassetName,
 					"image" : URIassetImageURL,
 					"description" : URIassetDescription,
@@ -250,17 +263,60 @@ async function setURIparser(events) {
 				  });
 			})
 		.catch(function (err) {
-			// request failed...
-			var db = client.db('mzkz');
-			var myquery = { "assetID": assetID.slice(2,18) };
-			var newvalues = { $set: {
-				"JSONdataErr" : true
-			}};
-			db.collection("erc1155_assets").updateOne(myquery, newvalues, function(err, res) {
-				if (err) throw err;
-				console.log("Error! get JSON call failed. The document ", typeData._name, " with ID ", assetID, " could not be flagged for manual update");
+			// request failed...try another method
+			console.log("Error! The function rp() failed for ", typeData._name, " with ID ", assetID, " Trying getJSON() instead.");
+			getJSON(uriJSON)
+			.then(function(assetJSON) {
+				// Request succeeded...
+				assetJSON = assetJSON;
+				URIassetName = assetJSON.name;
+				URIassetImageURL = assetJSON.image;
+				URIassetDescription = assetJSON.description;
+				URIassetProperties = assetJSON.properties;  
+				
+				var db = client.db('mzkz');
+				var myquery = { "assetID": assetID.slice(2,18) };
+				var newvalues = { $set: {
+					"assetID" : assetID.slice(2,18),
+					"assetIndex" : assetID.slice(51,66),
+					"assetIDfull" : assetID,
+					"name" : typeData._name,
+					"meltValue" : typeData._meltValue/1000000000000000000,
+					"totalSupply" : parseInt(typeData._totalSupply),
+					"circulatingSupply" : parseInt(typeData._circulatingSupply),
+					"transferFeeData" : typeData._transferFeeData.map(Number),
+					"meltFeeRatio" : parseInt(typeData._meltFeeRatio),
+					"creator" : typeData._creator,
+					"nonFungible" : typeData._nonFungible,
+					"URI" : uriJSON,
+					"popURI" : poptURI,
+					"isRecognizedByURI" : isJSONRecognizedByURI,
+					"Host" : assetHost,
+					"nameFromURI" : URIassetName,
+					"image" : URIassetImageURL,
+					"description" : URIassetDescription,
+					"properties" : URIassetProperties,
+					"lastUpdatedAtBlock" : blockNumber,
+					"JSONdata" : assetJSON
+				}};
+				db.collection("erc1155_assets").updateOne(myquery, newvalues, function(err, res) {
+					if (err) throw err;
+				});
+			}).catch(function(error) {
+				// request failed...attempting to flag the document for manual update
+				var db = client.db('mzkz');
+				var myquery = { "assetID": assetID.slice(2,18) };
+				var newvalues = { $set: {
+					"JSONdataErr" : true
+				}};
+				db.collection("erc1155_assets").updateOne(myquery, newvalues, function(err, res) {
+					if (err) throw err;
+					console.log("getJSON() call failed. The document ", typeData._name, " with ID ", assetID, " was flagged for manual update");
+				});
+				console.log(error);
 			});
-			console.log("get JSON call failed. The document ", typeData._name, " with ID ", assetID, " was flagged for manual update");
+
+			
 		});
 		
 		counter++;
@@ -268,64 +324,6 @@ async function setURIparser(events) {
     
 	console.log("Made ( " + counter + " / " + events.length + " ) updates to Asset Collection via setURI()");
 };
-
-// async function setURIparser(assetID, blockNumber = 0) {
-    
-//     let uriJSON = await getURI(assetID);
-//     console.log(uriJSON);
-//     let typeData = await getTypeData(assetID);
-//     console.log(typeData);
-//     let currBlockNumber = await getCurrBlockNumber();
-    
-//     if (blockNumber == 0) {
-//         blockNumber = currBlockNumber;
-//     };
-
-//     var options = {
-//         uri: uriJSON,
-//         json: true // Automatically stringifies the body to JSON
-//     };
-     
-//     rp(options)
-//     .then(function (assetJSON) {
-//             // Request succeeded...
-//             assetJSON = assetJSON;
-//             URIassetName = assetJSON.name;
-//             URIassetImageURL = assetJSON.image;
-//             URIassetDescription = assetJSON.description;
-//             URIassetProperties = assetJSON.properties;  
-                    
-//             var newAssetDocument = {
-//                 "assetID" : assetID.slice(2,18),
-//                 "assetIndex" : assetID.slice(51,66),
-//                 "assetIDfull" : assetID,
-//                 "name" : typeData._name,
-//                 "meltValue" : typeData._meltValue/1000000000000000000,
-//                 "totalSupply" : parseInt(typeData._totalSupply),
-//                 "circulatingSupply" : parseInt(typeData._circulatingSupply),
-//                 "transferFeeData" : typeData._transferFeeData.map(Number),
-//                 "meltFeeRatio" : parseInt(typeData._meltFeeRatio),
-//                 "creator" : typeData._creator,
-//                 "nonFungible" : typeData._nonFungible,
-//                 "URI" : uriJSON,
-//                 "nameFromURI" : URIassetName,
-//                 "image" : URIassetImageURL,
-//                 "description" : URIassetDescription,
-//                 "properties" : URIassetProperties,
-//                 "lastUpdatedAtBlock" : blockNumber,
-//                 "JSONdata" : assetJSON
-//             };
-            
-//             console.log(newAssetDocument);
-//             var db = client.db('mzkz');
-//             db.collection("erc1155_assets").insertOne(newAssetDocument);
-//         })
-//     .catch(function (err) {
-//         // request failed...
-//         console.log("get JSON call failed. The document was not updated");
-//     });
-// };
-
 
 /**
  * startWatching() is the top level function to begin
@@ -497,7 +495,7 @@ function populateURI(uriJSON, assetID) {
 	else {
 		var poptURI = uriJSON;
 	};
-	return [poptURI, isJSONRecognizedByURI]
+	return [poptURI, isJSONRecognizedByURI, assetHost]
 }
 
 
@@ -506,26 +504,31 @@ function loadURIfromTemplate(uriJSON, assetHost, assetID) {
 	var poptJSON = uriJSON;
 	var host = assetHost;
 	for (let i=0; i<JSONtemplates.length; i++) {
-		if (host == JSONtemplates[i]) {
+		if (host == JSONtemplates[i].slug) {
 			var template = JSONtemplates[i];
 		}
 	}
-		
+	let start = template.id_start;
+	let stop = template.id_stop;
+
 	if (host == "crypto-site") {
-		id = (assetID.slice(template.id_start,template.id_stop),"0000000000000001");
+		let beg = assetID.slice(start,stop);
+		let end = ("0000000000000001");
+		id = beg+end;
+		
 	}
 	else {
-		id = assetID.slice(template.id_start,template.id_stop);
+		id = assetID.slice(start,stop);
 	}
 	let index = template.index;
 
 	if(uriJSON.indexOf("{id}") > -1) {
-		poptJSON = uriJSON.replace("{id}", id)
+		poptJSON = uriJSON.replace("{id}", id);
 	}
 	if(uriJSON.indexOf("{index}") > -1) {
 		poptJSON = uriJSON.replace("{index}", index)
 	}
-
+	console.log(poptJSON);
 	// for (let i=0; i<JSONtemplates.length; i++) {
 	// 	var template = JSONtemplates[i];
 
@@ -533,14 +536,16 @@ function loadURIfromTemplate(uriJSON, assetHost, assetID) {
 	return poptJSON
 }
 
-function checkIfKnownByURIstring(uriJSON, knownHostList) {
+function checkIfKnownByURIstring(uriJSON) {
 	for (let i=0; i<knownHostlist.length; i++) {
-		var assetHost = knownHostlist[i];
-		if(uriJSON.indexOf(assetHost) > -1) {
+		var host = knownHostlist[i];
+		if(uriJSON.indexOf(host) > -1) {
 			isRecognizedJSON = true;
+			var assetHost = host;
 		}
 		else {
 			isRecognizedJSON = false;
+			var assetHost = "unrecognized";
 		}
 	}
 	return [isRecognizedJSON, assetHost]
