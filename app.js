@@ -6,6 +6,8 @@
 */
 
 const abi = require('./contract_abi.json');
+const request = require('request');
+const rp = require('request-promise');
 const Web3 = require('web3');
 const fs = require('fs');
 const MongoClient = require('mongodb').MongoClient;
@@ -33,29 +35,6 @@ const contract = new web3.eth.Contract(abi, '0x8562c38485B1E8cCd82E44F89823dA76C
 let startBlockNumber = parseInt(fs.readFileSync('StartBlock.txt', 'utf8')) - 1;
 var lastBlockNumber = startBlockNumber;
 
-// client.connect();
-// const changeStream = TransferCollection.watch();
-
-// changeStream.on('change', (change) => {
-//     console.log(change); // You could parse out the needed info and send only that data. 
-//     io.emit('changeData', change);
-// }); 
-
-
-
-
-
-// wait getURI(assetID)
-// .then(function(item) {
-//     uriJSON=item;
-                   
-//  $.getJSON(uriJSON, function(data) {
-//     console.log(data);
-//      assetName = data.name;
-//      assetImageURL = data.image;
-//      assetDescription = data.description;
-//      assetProperties = data.properties;
-// });
 
 // Application begins here
 connectToDBB(client,db);
@@ -66,57 +45,72 @@ function connectToDBB(client) {
 		if (err) throw err;
         //watchCollection();
         //startWatching();
-        getParseUpdate();
+        getParseUpdate(assetID);
         
 
 
 	  }); 
 };
 
-function getParseUpdate() {
-    const assetID = "0x70800000000001b8000000000000000000000000000000000000000000000000";
+const assetID = "0x70800000000001b8000000000000000000000000000000000000000000000000";
 
-    getTypeData(assetID)
-    .then(function(item) {
-        //console.log(assetID.slice(2,18), assetName, assetMeltValue, assetTotalSupply, assetCirculatingSupply, assetTransferFeeData, assetMeltFeeRatio, assetCreator)
-        var newAssetDocument = {
-            "assetID" : assetID,
-            "name" : item._name,
-            "meltValue" : item._meltValue/1000000000000000000,
-            "totalSupply" : item._totalSupply,
-            "circulatingSupply" : item._circulatingSupply,
-            "transferFeeData" : item._transferFeeData,
-            "meltFeeRatio" : item._meltFeeRatio,
-            "creator" : item._creator
-        }
-        console.log(newAssetDocument);
-        var db = client.db('mzkz');
-        db.collection("erc1155_assets").insertOne(newAssetDocument);
+async function getParseUpdate(assetID, blockNumber = 0) {
+    
+    let uriJSON = await getURI(assetID);
+    console.log(uriJSON);
+    let typeData = await getTypeData(assetID);
+    console.log(typeData);
+    let currBlockNumber = await getCurrBlockNumber();
+    
+    if (blockNumber == 0) {
+        blockNumber = currBlockNumber;
+    };
 
+    var options = {
+        uri: uriJSON,
+        json: true // Automatically stringifies the body to JSON
+    };
+     
+    rp(options)
+    .then(function (assetJSON) {
+            // Request succeeded...
+            assetJSON = assetJSON;
+            URIassetName = assetJSON.name;
+            URIassetImageURL = assetJSON.image;
+            URIassetDescription = assetJSON.description;
+            URIassetProperties = assetJSON.properties;  
+                    
+            var newAssetDocument = {
+                "assetID" : assetID.slice(2,18),
+                "assetIndex" : assetID.slice(51,66),
+                "assetIDfull" : assetID,
+                "name" : typeData._name,
+                "meltValue" : typeData._meltValue/1000000000000000000,
+                "totalSupply" : parseInt(typeData._totalSupply),
+                "circulatingSupply" : parseInt(typeData._circulatingSupply),
+                "transferFeeData" : typeData._transferFeeData.map(Number),
+                "meltFeeRatio" : parseInt(typeData._meltFeeRatio),
+                "creator" : typeData._creator,
+                "nonFungible" : typeData._nonFungible,
+                "URI" : uriJSON,
+                "nameFromURI" : URIassetName,
+                "image" : URIassetImageURL,
+                "description" : URIassetDescription,
+                "properties" : URIassetProperties,
+                "lastUpdatedAtBlock" : blockNumber,
+                "JSONdata" : assetJSON
+            };
+            
+            console.log(newAssetDocument);
+            var db = client.db('mzkz');
+            db.collection("erc1155_assets").insertOne(newAssetDocument);
+        })
+    .catch(function (err) {
+        // request failed...
+        console.log("get JSON call failed. The document was not updated");
     });
-}
+};
 
-
-
-function watchCollection() {
-
-    db.collection('erc1155Events_transfer').watch().
-    on('change', data => console.log(new Date(), data));
-    //const changeStreamCursor = TransferCollection.watch();
-    //watchDBBForUpdates(changeStreamCursor);
-}
-
-
-//this function polls a change stream and prints out each change as it comes in
-function watchDBBForUpdates(cursor) {
-  while (!cursor.isExhausted()) {
-    if (cursor.hasNext()) {
-      change = cursor.next();
-      print(JSON.stringify(change));
-    }
-  }
-  watchDBBForUpdates(cursor);
-}
 
 /**
  * startWatching() is the top level function to begin
@@ -253,14 +247,26 @@ function updateDDBFromEvents(db,collection,events) {
 	console.log("Made ( " + counter + " / " + events.length + " ) updates to " + collection);
 }
 
-async function getTypeData(id) {
+function getTypeData(id) {
     return contract.methods.typeData(id).call()
 };
     
-async  function getURI(id) {
-    return enjinMultiverse.methods.uri(id).call()
+function getURI(id) {
+    return contract.methods.uri(id).call()
 }; 
 
+function getJSON(url, req, res) {
+
+    request(url, (error, response, body)=> {
+        if (!error && response.statusCode === 200) {
+            //const uriResponse = JSON.parse(body);
+            //console.log("Got a response: ", uriResponse, url);
+            return body;
+        } else {
+            console.log("Got an error requesting JSON file: ", url);
+        };
+    });
+};
 
 function readEventsFromDBB(db) {
 	  
@@ -377,4 +383,3 @@ function wait(ms){
     	end = new Date().getTime();
   	}
 }
-
