@@ -35,6 +35,64 @@ const contract = new web3.eth.Contract(abi, '0x8562c38485B1E8cCd82E44F89823dA76C
 let startBlockNumber = parseInt(fs.readFileSync('StartBlock.txt', 'utf8')) - 1;
 var lastBlockNumber = startBlockNumber;
 
+const knownHostlist = [
+	"bitcoin-hodler.net",
+	"omegatechgame.com", //CiM
+	"Flurbo.xyz",
+	"digitaloceanspaces.com", //9Lives
+	"spacepirate.io", 
+	"enjin.io", 
+	"cryptofights.io",
+	"hexagrid.store",
+	"containmentcorps",
+	"mzkz.xyz",
+	"forestknight",
+	"PatrickMockridge", //makerverse
+	"alterverse.com",
+	"crypto-site" //WoC
+];
+
+const JSONtemplates = [{
+	"BitcoinHodler" : {
+		slug : "bitcoin-hodler.net",
+		id : "1880000000000243",
+		id_start : 2,
+		id_stop : 18,
+		index : "0000000000000001"
+	}},
+	{
+	"WarOfCrypto" : {
+		slug : "crypto-site",
+		id : "00800000000001e90000000000000001",
+		id_start : 2,
+		id_stop : 18,
+		index : ""
+	}},
+	{
+	"CatsInMechs" : {
+		slug: "omegatechgame.com",
+		id : "10800000000000e0000000000000000000000000000000000000000000000000",
+		id_start : 2,
+		id_stop : 66,
+		index : "00000000000000000000000000000001"
+	}},
+	{
+	"Flurbo" : {
+		slug : "Flurbo.xyz",
+		id : "7880000000000226",
+		id_start : 2,
+		id_stop : 18,
+		index : "0000000000000001"
+	}},
+	{
+	"Enjin" : {
+		slug : "enjin.io",
+		id : "1880000000000243",
+		id_start : 2,
+		id_stop : 18,
+		index : ""
+	}}
+]
 
 // Application begins here
 connectToDBB(client,db);
@@ -42,13 +100,29 @@ connectToDBB(client,db);
 function connectToDBB(client) {
 	client.connect( function (err, client) {
 		if (err) throw err;
-        startWatching();
-        //getParseUpdate(assetID);
-        
-
+		//syncFiles();
+		startWatching();
 
 	  }); 
 };
+
+async function syncFiles() {
+	// Synchronize files to most recent database document
+	var db = client.db('mzkz');
+	db.collection("erc1155_assets").find({}).sort({"blockNumber":-1}).limit(1)
+	.then(function (BlockToSync) {
+		console.log(BlockToSync)
+		fs.writeFile('StartBlock.txt', BlockToSync, (err) => {
+			if (err) throw err;
+		  });
+	})
+	.catch(function (err) {
+		// request failed...
+		console.log("Could not find the sync block! Will revert to default value written in StartBlock.txt.");
+	});
+
+
+}
 
 //const assetID = "0x70800000000001b8000000000000000000000000000000000000000000000000";
 
@@ -57,18 +131,82 @@ async function createAssetParser(events) {
 		
 	for (let i=0; i<events.length; i++) {
         let eventObj = events[i];
-        //perform actions on the collection object
+		let assetID = eventObj.topics[1];
+		let blockNumber = eventObj.blockNumber;
+		let typeData = await getTypeData(assetID);
+						
+		var newAssetDocument = {
+			"assetID" : assetID.slice(2,18),
+			"assetIndex" : assetID.slice(51,66),
+			"assetIDfull" : assetID,
+			"name" : typeData._name,
+			"meltValue" : typeData._meltValue/1000000000000000000,
+			"totalSupply" : parseInt(typeData._totalSupply),
+			"circulatingSupply" : parseInt(typeData._circulatingSupply),
+			"transferFeeData" : typeData._transferFeeData.map(Number),
+			"meltFeeRatio" : parseInt(typeData._meltFeeRatio),
+			"creator" : typeData._creator,
+			"nonFungible" : typeData._nonFungible,
+			"genBlock" : blockNumber,
+			"lastUpdatedAtBlock" : blockNumber
+		};
+		
+		var db = client.db('mzkz');
+		db.collection("erc1155_assets").insertOne(newAssetDocument);
+
+		counter++;
+	}
+    
+	console.log("Made ( " + counter + " / " + events.length + " ) insertions to Asset Collection via create()");
+};
+
+async function updateNameParser(events) {
+	let counter = 0;
+		
+	for (let i=0; i<events.length; i++) {
+        let eventObj = events[i];
+		let assetID = eventObj.topics[1];
+		let blockNumber = eventObj.blockNumber;
+		let typeData = await getTypeData(assetID);
+		var db = client.db('mzkz');
+		var myquery = { "assetID": assetID.slice(2,18) };
+		var newvalues = { $set: {
+			"assetID" : assetID.slice(2,18),
+			"assetIndex" : assetID.slice(51,66),
+			"assetIDfull" : assetID,
+			"name" : typeData._name,
+			"meltValue" : typeData._meltValue/1000000000000000000,
+			"totalSupply" : parseInt(typeData._totalSupply),
+			"circulatingSupply" : parseInt(typeData._circulatingSupply),
+			"transferFeeData" : typeData._transferFeeData.map(Number),
+			"meltFeeRatio" : parseInt(typeData._meltFeeRatio),
+			"creator" : typeData._creator,
+			"nonFungible" : typeData._nonFungible,
+			"lastUpdatedAtBlock" : blockNumber
+		}};
+		db.collection("erc1155_assets").updateOne(myquery, newvalues, function(err, res) {
+		  if (err) throw err;
+		  //console.log("1 document updated");
+		});
+		
+		counter++;
+	}
+    
+	console.log("Made ( " + counter + " / " + events.length + " ) updates to Asset Collection via updateName()");
+};
+
+async function setURIparser(events) {
+	let counter = 0;
+		
+	for (let i=0; i<events.length; i++) {
+		let eventObj = events[i];
 		let assetID = eventObj.topics[1];
 		let blockNumber = eventObj.blockNumber;
 		let uriJSON = await getURI(assetID);
-		console.log(uriJSON);
+		let [poptURI, isJSONRecognizedByURI] = populateURI(uriJSON, assetID);
+		//console.log(uriJSON);
 		let typeData = await getTypeData(assetID);
-		console.log(typeData);
-		// let currBlockNumber = await getCurrBlockNumber();
-		
-		// if (blockNumber == 0) {
-		// 	blockNumber = currBlockNumber;
-		// };
+		//console.log(typeData);
 	
 		var options = {
 			uri: uriJSON,
@@ -83,8 +221,10 @@ async function createAssetParser(events) {
 				URIassetImageURL = assetJSON.image;
 				URIassetDescription = assetJSON.description;
 				URIassetProperties = assetJSON.properties;  
-						
-				var newAssetDocument = {
+				
+				var db = client.db('mzkz');
+				var myquery = { "assetID": assetID.slice(2,18) };
+				var newvalues = { $set: {
 					"assetID" : assetID.slice(2,18),
 					"assetIndex" : assetID.slice(51,66),
 					"assetIDfull" : assetID,
@@ -96,80 +236,95 @@ async function createAssetParser(events) {
 					"meltFeeRatio" : parseInt(typeData._meltFeeRatio),
 					"creator" : typeData._creator,
 					"nonFungible" : typeData._nonFungible,
-					"lastUpdatedAtBlock" : blockNumber
-				};
-				
-				console.log(newAssetDocument);
-				var db = client.db('mzkz');
-				db.collection("erc1155_assets").insertOne(newAssetDocument);
+					"URI" : uriJSON,
+					"nameFromURI" : URIassetName,
+					"image" : URIassetImageURL,
+					"description" : URIassetDescription,
+					"properties" : URIassetProperties,
+					"lastUpdatedAtBlock" : blockNumber,
+					"JSONdata" : assetJSON
+				}};
+				db.collection("erc1155_assets").updateOne(myquery, newvalues, function(err, res) {
+					if (err) throw err;
+					//console.log("1 document updated");
+				  });
 			})
 		.catch(function (err) {
 			// request failed...
-			console.log("get JSON call failed. The document was not updated");
+			var db = client.db('mzkz');
+			var myquery = { "assetID": assetID.slice(2,18) };
+			var newvalues = { $set: {
+				"JSONdataErr" : true
+			}};
+			db.collection("erc1155_assets").updateOne(myquery, newvalues, function(err, res) {
+				if (err) throw err;
+				console.log("Error! get JSON call failed. The document ", typeData._name, " with ID ", assetID, " could not be flagged for manual update");
+			});
+			console.log("get JSON call failed. The document ", typeData._name, " with ID ", assetID, " was flagged for manual update");
 		});
-
+		
 		counter++;
 	}
     
-	console.log("Made ( " + counter + " / " + events.length + " ) updates to " + collection);
+	console.log("Made ( " + counter + " / " + events.length + " ) updates to Asset Collection via setURI()");
 };
 
-async function getParseUpdate(assetID, blockNumber = 0) {
+// async function setURIparser(assetID, blockNumber = 0) {
     
-    let uriJSON = await getURI(assetID);
-    console.log(uriJSON);
-    let typeData = await getTypeData(assetID);
-    console.log(typeData);
-    let currBlockNumber = await getCurrBlockNumber();
+//     let uriJSON = await getURI(assetID);
+//     console.log(uriJSON);
+//     let typeData = await getTypeData(assetID);
+//     console.log(typeData);
+//     let currBlockNumber = await getCurrBlockNumber();
     
-    if (blockNumber == 0) {
-        blockNumber = currBlockNumber;
-    };
+//     if (blockNumber == 0) {
+//         blockNumber = currBlockNumber;
+//     };
 
-    var options = {
-        uri: uriJSON,
-        json: true // Automatically stringifies the body to JSON
-    };
+//     var options = {
+//         uri: uriJSON,
+//         json: true // Automatically stringifies the body to JSON
+//     };
      
-    rp(options)
-    .then(function (assetJSON) {
-            // Request succeeded...
-            assetJSON = assetJSON;
-            URIassetName = assetJSON.name;
-            URIassetImageURL = assetJSON.image;
-            URIassetDescription = assetJSON.description;
-            URIassetProperties = assetJSON.properties;  
+//     rp(options)
+//     .then(function (assetJSON) {
+//             // Request succeeded...
+//             assetJSON = assetJSON;
+//             URIassetName = assetJSON.name;
+//             URIassetImageURL = assetJSON.image;
+//             URIassetDescription = assetJSON.description;
+//             URIassetProperties = assetJSON.properties;  
                     
-            var newAssetDocument = {
-                "assetID" : assetID.slice(2,18),
-                "assetIndex" : assetID.slice(51,66),
-                "assetIDfull" : assetID,
-                "name" : typeData._name,
-                "meltValue" : typeData._meltValue/1000000000000000000,
-                "totalSupply" : parseInt(typeData._totalSupply),
-                "circulatingSupply" : parseInt(typeData._circulatingSupply),
-                "transferFeeData" : typeData._transferFeeData.map(Number),
-                "meltFeeRatio" : parseInt(typeData._meltFeeRatio),
-                "creator" : typeData._creator,
-                "nonFungible" : typeData._nonFungible,
-                "URI" : uriJSON,
-                "nameFromURI" : URIassetName,
-                "image" : URIassetImageURL,
-                "description" : URIassetDescription,
-                "properties" : URIassetProperties,
-                "lastUpdatedAtBlock" : blockNumber,
-                "JSONdata" : assetJSON
-            };
+//             var newAssetDocument = {
+//                 "assetID" : assetID.slice(2,18),
+//                 "assetIndex" : assetID.slice(51,66),
+//                 "assetIDfull" : assetID,
+//                 "name" : typeData._name,
+//                 "meltValue" : typeData._meltValue/1000000000000000000,
+//                 "totalSupply" : parseInt(typeData._totalSupply),
+//                 "circulatingSupply" : parseInt(typeData._circulatingSupply),
+//                 "transferFeeData" : typeData._transferFeeData.map(Number),
+//                 "meltFeeRatio" : parseInt(typeData._meltFeeRatio),
+//                 "creator" : typeData._creator,
+//                 "nonFungible" : typeData._nonFungible,
+//                 "URI" : uriJSON,
+//                 "nameFromURI" : URIassetName,
+//                 "image" : URIassetImageURL,
+//                 "description" : URIassetDescription,
+//                 "properties" : URIassetProperties,
+//                 "lastUpdatedAtBlock" : blockNumber,
+//                 "JSONdata" : assetJSON
+//             };
             
-            console.log(newAssetDocument);
-            var db = client.db('mzkz');
-            db.collection("erc1155_assets").insertOne(newAssetDocument);
-        })
-    .catch(function (err) {
-        // request failed...
-        console.log("get JSON call failed. The document was not updated");
-    });
-};
+//             console.log(newAssetDocument);
+//             var db = client.db('mzkz');
+//             db.collection("erc1155_assets").insertOne(newAssetDocument);
+//         })
+//     .catch(function (err) {
+//         // request failed...
+//         console.log("get JSON call failed. The document was not updated");
+//     });
+// };
 
 
 /**
@@ -204,7 +359,7 @@ async function watchEvents() {
 		let stop = (startBlockNumber + ((tt+1) * (blockInterval)));
 
 		console.log("Getting events from: " + start + " to " + stop);
-		let [eventsCreate, eventsMelt, eventsMint, eventsSetURI, eventsTransfer] = await checkBetweenBlocks(start, stop);
+		let [eventsCreate, eventsMelt, eventsMint, eventsSetURI, eventsTransfer, eventsUpdateName] = await checkBetweenBlocks(start, stop);
 		lastBlockNumber = stop;
 		tt++;
 
@@ -232,12 +387,20 @@ async function watchEvents() {
 			var collection = "erc1155Events_setURI";
 			//console.log(events)
 			//updateDDBFromEvents(db,collection,events);
+			setURIparser(events);
 		 });
 
 		 eventsTransfer.then(function(events) {
 			var collection = "erc1155Events_transfer";
 			//console.log(events)
 			//updateDDBFromEvents(db,collection,events);
+		 });
+
+		 eventsUpdateName.then(function(events) {
+			var collection = "erc1155Events_updateName";
+			//console.log(events)
+			//updateDDBFromEvents(db,collection,events);
+			updateNameParser(events);
 		 });
 	}
 
@@ -246,13 +409,14 @@ async function watchEvents() {
 		let stop = latestCompleteBlock;
 		
 		console.log("Getting events from: " + start + " to " + stop);
-		let [eventsCreate, eventsMelt, eventsMint, eventsSetURI, eventsTransfer] = await checkBetweenBlocks(start, stop);
+		let [eventsCreate, eventsMelt, eventsMint, eventsSetURI, eventsTransfer, eventsUpdateName] = await checkBetweenBlocks(start, stop);
 		lastBlockNumber = currBlockNumber;
 
 		eventsCreate.then(function(events) {
 			var collection = "erc1155Events_create";
 			//console.log(events)
 			//updateDDBFromEvents(db,collection,events);
+			createAssetParser(events)
 		 });
 		
 		eventsMelt.then(function(events) {
@@ -271,13 +435,21 @@ async function watchEvents() {
 			var collection = "erc1155Events_setURI";
 			//console.log(events)
 			//updateDDBFromEvents(db,collection,events);
+			setURIparser(events);
 		 });
 
 		 eventsTransfer.then(function(events) {
 			var collection = "erc1155Events_transfer";
 			//console.log(events)
 			//updateDDBFromEvents(db,collection,events);
-		 })		 
+		 });
+
+		 eventsUpdateName.then(function(events) {
+			var collection = "erc1155Events_updateName";
+			//console.log(events)
+			//updateDDBFromEvents(db,collection,events);
+			updateNameParser(events);
+		 });
 
 	} else {
 		console.log("...watching the blockchain...")
@@ -314,6 +486,79 @@ function getTypeData(id) {
 function getURI(id) {
     return contract.methods.uri(id).call()
 }; 
+
+function populateURI(uriJSON, assetID) {
+	[isJSONRecognizedByURI, assetHost] = checkIfKnownByURIstring(uriJSON);
+	//isJSONRecognizedByCreator = checkIfKnownByCreator(uriJSON);
+
+	if (isJSONRecognizedByURI == true) {
+		var poptURI = loadURIfromTemplate(uriJSON, assetHost, assetID);
+	}
+	else {
+		var poptURI = uriJSON;
+	};
+	return [poptURI, isJSONRecognizedByURI]
+}
+
+
+
+function loadURIfromTemplate(uriJSON, assetHost, assetID) {
+	var poptJSON = uriJSON;
+	var host = assetHost;
+	for (let i=0; i<JSONtemplates.length; i++) {
+		if (host == JSONtemplates[i]) {
+			var template = JSONtemplates[i];
+		}
+	}
+		
+	if (host == "crypto-site") {
+		id = (assetID.slice(template.id_start,template.id_stop),"0000000000000001");
+	}
+	else {
+		id = assetID.slice(template.id_start,template.id_stop);
+	}
+	let index = template.index;
+
+	if(uriJSON.indexOf("{id}") > -1) {
+		poptJSON = uriJSON.replace("{id}", id)
+	}
+	if(uriJSON.indexOf("{index}") > -1) {
+		poptJSON = uriJSON.replace("{index}", index)
+	}
+
+	// for (let i=0; i<JSONtemplates.length; i++) {
+	// 	var template = JSONtemplates[i];
+
+	// }
+	return poptJSON
+}
+
+function checkIfKnownByURIstring(uriJSON, knownHostList) {
+	for (let i=0; i<knownHostlist.length; i++) {
+		var assetHost = knownHostlist[i];
+		if(uriJSON.indexOf(assetHost) > -1) {
+			isRecognizedJSON = true;
+		}
+		else {
+			isRecognizedJSON = false;
+		}
+	}
+	return [isRecognizedJSON, assetHost]
+}
+
+function checkIfKnownByCreator(creator) {
+	for (let i=0; i<knownCreatorlist.length; i++) {
+		var creator = knownCreatorlist[i];
+		if(uriJSON.indexOf(org) > -1) {
+			isRecognizedJSON = true;
+		}
+		else {
+			isRecognizedJSON = false;
+		}
+	}
+	return isRecognizedJSON
+}
+
 
 // function getJSON(url, req, res) {
 
@@ -425,8 +670,18 @@ function checkBetweenBlocks(fromBlock, toBlock) {
 			//console.log("Checked for Transfer events between blocks");
 			return eventsTransfer;
 		});		
+	wait(100);
+	let eventsUpdateName = web3.eth.getPastLogs({
+		fromBlock: fromBlock,
+		toBlock: toBlock,
+		address: "0x8562c38485B1E8cCd82E44F89823dA76C98eb0Ab",
+		topics: ["0x28bce0e23786df7a86b305fe801506dbf59150e2f634d23d4b6d702f99e60b87"]
+		}, function (error, eventsUpdateName) {
+			//console.log("Checked for Name Updates events between blocks");
+			return eventsUpdateName;
+		});	
 
-	return [eventsCreate, eventsMelt, eventsMint, eventsSetURI, eventsTransfer];
+	return [eventsCreate, eventsMelt, eventsMint, eventsSetURI, eventsTransfer, eventsUpdateName];
 }
 	
 /**
