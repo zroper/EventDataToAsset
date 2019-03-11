@@ -43,7 +43,6 @@ connectToDBB(client,db);
 function connectToDBB(client) {
 	client.connect( function (err, client) {
 		if (err) throw err;
-        //watchCollection();
         //startWatching();
         getParseUpdate(assetID);
         
@@ -255,18 +254,18 @@ function getURI(id) {
     return contract.methods.uri(id).call()
 }; 
 
-function getJSON(url, req, res) {
+// function getJSON(url, req, res) {
 
-    request(url, (error, response, body)=> {
-        if (!error && response.statusCode === 200) {
-            //const uriResponse = JSON.parse(body);
-            //console.log("Got a response: ", uriResponse, url);
-            return body;
-        } else {
-            console.log("Got an error requesting JSON file: ", url);
-        };
-    });
-};
+//     request(url, (error, response, body)=> {
+//         if (!error && response.statusCode === 200) {
+//             //const uriResponse = JSON.parse(body);
+//             //console.log("Got a response: ", uriResponse, url);
+//             return body;
+//         } else {
+//             console.log("Got an error requesting JSON file: ", url);
+//         };
+//     });
+// };
 
 function readEventsFromDBB(db) {
 	  
