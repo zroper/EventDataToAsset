@@ -8,6 +8,7 @@
 const abi = require('./contract_abi.json');
 const getJSON = require('get-json');
 const rp = require('request-promise');
+const curl = new (require( 'curl-request' ))();
 const Web3 = require('web3');
 const fs = require('fs');
 const MongoClient = require('mongodb').MongoClient;
@@ -366,12 +367,11 @@ async function setURIparser(events) {
 		let blockNumber = eventObj.blockNumber;
 		let uriJSON = await getURI(assetID);
 		let [poptURI, isJSONRecognizedByURI, assetHost, assetCategory, assetTags] = populateURI(uriJSON, assetID);
-		//console.log(uriJSON);
 		let typeData = await getTypeData(assetID);
-		//console.log(typeData);
+		let poptURLcors = "http://cors.io/?u=" + encodeURIComponent( poptURI );
 	
 		var options = {
-			uri: uriJSON,
+			uri: poptURI,
 			json: true // Automatically stringifies the body to JSON
 		};
 		 
@@ -412,7 +412,7 @@ async function setURIparser(events) {
 					"JSONdataErr" : false,
 					"JSONdata" : assetJSON
 				}};
-				console.log(poptURI);
+				//console.log(poptURI);
 				db.collection("erc1155_assets").updateOne(myquery, newvalues, function(err, res) {
 					if (err) throw err;
 					//console.log("1 document updated");
@@ -421,7 +421,7 @@ async function setURIparser(events) {
 		.catch(function (err) {
 			// request failed...try another method
 			console.log("Error! The function rp() failed for ", typeData._name, " with ID ", assetID, " Trying getJSON() instead.");
-			getJSON(uriJSON)
+			getJSON(poptURI)
 			.then(function(assetJSON) {
 				// Request succeeded...
 				assetJSON = assetJSON;
@@ -463,17 +463,64 @@ async function setURIparser(events) {
 					if (err) throw err;
 				});
 			}).catch(function(error) {
-				// request failed...attempting to flag the document for manual update
+				//trying a third method to get the JSON data
+				console.log("The function getJSON() failed for ", typeData._name, " with ID ", assetID, " Trying curl.get() instead.");
+				
+				curl.get(poptURLcors)
+				.then(({statusCode, body, headers}) => {
+									// Request succeeded...
+				assetJSON = assetJSON;
+				URIassetName = assetJSON.name;
+				URIassetImageURL = assetJSON.image;
+				URIassetDescription = assetJSON.description;
+				URIassetProperties = assetJSON.properties;  
+				
 				var db = client.db('mzkz');
 				var myquery = { "assetID": assetID.slice(2,18) };
 				var newvalues = { $set: {
-					"JSONdataErr" : true
+					"assetID" : assetID.slice(2,18),
+					"assetIndex" : assetID.slice(51,66),
+					"assetIDfull" : assetID,
+					"name" : typeData._name,
+					"meltValue" : typeData._meltValue/1000000000000000000,
+					"totalSupply" : typeData._totalSupply,
+					"circulatingSupply" : typeData._circulatingSupply,
+					"transferFeeData" : typeData._transferFeeData.map(Number),
+					"meltFeeRatio" : parseInt(typeData._meltFeeRatio),
+					"creator" : typeData._creator,
+					"nonFungible" : typeData._nonFungible,
+					"URI" : uriJSON,
+					"popURI" : poptURI,
+					"isRecognizedByURI" : isJSONRecognizedByURI,
+					"host" : assetHost,
+					"category" :assetCategory,
+					"tags" : assetTags,
+					"nameFromURI" : URIassetName,
+					"image" : URIassetImageURL,
+					"description" : URIassetDescription,
+					"properties" : URIassetProperties,
+					"lastUpdatedAtBlock" : blockNumber,
+					"JSONdataErr" : false,
+					"JSONdata" : assetJSON
 				}};
+				//console.log(poptURI);
 				db.collection("erc1155_assets").updateOne(myquery, newvalues, function(err, res) {
 					if (err) throw err;
-					console.log("getJSON() call failed. The document ", typeData._name, " with ID ", assetID, " was flagged for manual update");
 				});
-				console.log(error);
+				})
+				.catch((e) => {
+					// request failed...attempting to flag the document for manual update
+					var db = client.db('mzkz');
+					var myquery = { "assetID": assetID.slice(2,18) };
+					var newvalues = { $set: {
+						"JSONdataErr" : true
+					}};
+					db.collection("erc1155_assets").updateOne(myquery, newvalues, function(err, res) {
+						if (err) throw err;
+						console.log("curl.get() call failed. The document ", typeData._name, " with ID ", assetID, " was flagged for manual update");
+					});
+					console.log(error);
+					});
 			});
 		});
 		counter++;
@@ -525,10 +572,11 @@ function loadURIfromTemplate(uriJSON, assetHost, assetID) {
 	// create the ids based on instructions
 	// war of crpyto is special in this case 
 	// because they use a bipartite slice
-	if (host == "crypto-site") {
+	if (host.indexOf("crypto-site") > -1) {
 		let beg = assetID.slice(start,stop);
 		let end = ("0000000000000001");
 		id = beg+end;
+		console.log(id);
 	}
 	else {
 		id = assetID.slice(start,stop);
@@ -541,6 +589,8 @@ function loadURIfromTemplate(uriJSON, assetHost, assetID) {
 	if(uriJSON.indexOf("{index}") > -1) {
 		poptJSON = uriJSON.replace("{index}", index)
 	}
+
+	console.log(poptJSON);
 
 	return [poptJSON, assetCategory, assetTags]
 }

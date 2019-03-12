@@ -9,11 +9,21 @@
   "author": "zroper",
   "license": "ISC",
   "dependencies": {
+    "curl-request": "^1.1.1",
     "fs": "0.0.1-security",
     "get-json": "^1.0.1",
     "manager": "^1.0.9",
     "mongodb": "^3.1.13",
     "request-promise": "^4.2.4",
     "web3": "^1.0.0-beta.48"
-  }
+  },
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zroper/EventDataToAsset.git"
+  },
+  "bugs": {
+    "url": "https://github.com/zroper/EventDataToAsset/issues"
+  },
+  "homepage": "https://github.com/zroper/EventDataToAsset#readme"
 }
