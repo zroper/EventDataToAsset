@@ -96,7 +96,7 @@ const JSONtemplates = [	{
 		tags : ["ERC-1155"],
 		id : "10800000000000e0000000000000000000000000000000000000000000000000",
 		id_start : 2,
-		id_stop : 66,
+		id_stop : 65,
 		index : "00000000000000000000000000000001"
 	},
 	{
@@ -178,7 +178,7 @@ async function watchEvents() {
 	let currBlockNumber = await getCurrBlockNumber();
 	let latestCompleteBlock = currBlockNumber - 1;
 	//let genBlock = 6043439; //ERC-1155 contract creation at txn:0x6e653115cacb3b8b226f6eff9234320c4e5f4e88e0988df2957a3bbca83ccb1b
-	let blockInterval = 1000;
+	let blockInterval = 10000;
 	
 	//console.log(currBlockNumber, lastBlockNumber,blockInterval);	
 	
@@ -587,7 +587,7 @@ function loadURIfromTemplate(uriJSON, assetHost, assetID) {
 		poptJSON = uriJSON.replace("{id}", id);
 	}
 	if(uriJSON.indexOf("{index}") > -1) {
-		poptJSON = uriJSON.replace("{index}", index)
+		poptJSON = poptJSON.replace("{index}", index)
 	}
 
 	console.log(poptJSON);
