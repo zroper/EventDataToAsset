@@ -5,6 +5,7 @@
  * by using web3 and Infura. to look at past completed block events
 */
 
+// const WooCommerceAPI = require('woocommerce-api');
 const abi = require('./contract_abi.json');
 const getJSON = require('get-json');
 const rp = require('request-promise');
@@ -22,6 +23,16 @@ const options = {
 const client = new MongoClient(uri, options);
 const db = new Db('mzkz', client);
 const AssetCollection = db.collection("erc1155_assets");
+
+// const WooCommerce = new WooCommerceAPI({
+// 	url: 'https://mzkz.xyz',
+// 	consumerKey: 'ck_8f817f528cfc911c139788bf8aa46f505a9e9c8a',
+// 	consumerSecret: 'cs_497f44bcf03034a3e64be7723ae33d268e070f1a',
+// 	wpAPI: true,
+// 	version: 'wc/v1'
+//   });
+
+const StartingWPproductID = 70000000;
 
 
 
@@ -127,6 +138,7 @@ connectToDBB(client,db);
 function connectToDBB(client) {
 	client.connect( function (err, client) {
 		if (err) throw err;
+
 		//syncFiles();
 		startWatching();
 
@@ -160,11 +172,12 @@ async function syncFiles() {
  * the contract event watching
  */
 async function startWatching() {
+	
 	let watching = true;
 
 	while (watching) {
 		await watchEvents();
-		wait(2500);
+		wait(1000);
 	}
 }
 
@@ -178,7 +191,7 @@ async function watchEvents() {
 	let currBlockNumber = await getCurrBlockNumber();
 	let latestCompleteBlock = currBlockNumber - 1;
 	//let genBlock = 6043439; //ERC-1155 contract creation at txn:0x6e653115cacb3b8b226f6eff9234320c4e5f4e88e0988df2957a3bbca83ccb1b
-	let blockInterval = 10000;
+	let blockInterval = 1000;
 	
 	//console.log(currBlockNumber, lastBlockNumber,blockInterval);	
 	
@@ -196,7 +209,7 @@ async function watchEvents() {
 			//var collection = "erc1155Events_create";
 			//console.log(events)
             //updateDDBFromEvents(db,collection,events);
-            createAssetParser(events)
+            // createAssetParser(events)
 		 });
 		
 		eventsMelt.then(function(events) {
@@ -228,7 +241,7 @@ async function watchEvents() {
 			var collection = "erc1155Events_updateName";
 			//console.log(events)
 			//updateDDBFromEvents(db,collection,events);
-			updateNameParser(events);
+			// updateNameParser(events);
 		 });
 	}
 
@@ -244,7 +257,7 @@ async function watchEvents() {
 			var collection = "erc1155Events_create";
 			//console.log(events)
 			//updateDDBFromEvents(db,collection,events);
-			createAssetParser(events)
+			// createAssetParser(events)
 		 });
 		
 		eventsMelt.then(function(events) {
@@ -263,7 +276,7 @@ async function watchEvents() {
 			var collection = "erc1155Events_setURI";
 			//console.log(events)
 			//updateDDBFromEvents(db,collection,events);
-			setURIparser(events);
+			// setURIparser(events);
 		 });
 
 		 eventsTransfer.then(function(events) {
@@ -276,7 +289,7 @@ async function watchEvents() {
 			var collection = "erc1155Events_updateName";
 			//console.log(events)
 			//updateDDBFromEvents(db,collection,events);
-			updateNameParser(events);
+			// updateNameParser(events);
 		 });
 
 	} else {
@@ -295,28 +308,238 @@ async function createAssetParser(events) {
 	for (let i=0; i<events.length; i++) {
         let eventObj = events[i];
 		let assetID = eventObj.topics[1];
-		let blockNumber = eventObj.blockNumber;
 		let typeData = await getTypeData(assetID);
+		let blockNumber = eventObj.blockNumber.toString();
+		// let wpProductID = StartingWPproductID + blockNumber + i * blockNumber;
+		// let productString = ("product/" + wpProductID);
+
+		let transferFeeArray = typeData._transferFeeData.map(Number);
+		let transferFee = (transferFeeArray[2]/1000000000000000000).toString();
+
+		if (transferFeeArray[0]==0) {
+			transferFeeType = "None"
+		}
+		else if (transferFeeArray[0]==1) {
+			transferFeeType = "Per Transfer"
+		}
+		else {
+			transferFeeType = "Unknown"
+		};
+
+		if ( typeData._supplyModel.indexOf("0x03EC388fb9Aef6442C7372DB3C6b7EEd93469c0B") > -1) {
+			supplyModel = "Collapsing"
+		}
+		else if ( typeData._supplyModel.indexOf("0x0000000000000000000000000000000000000000") > -1) {
+			supplyModel = "Fixed"
+		}
+		else if ( typeData._supplyModel.indexOf("0XE7BB8A81F070E69EAB9AFAB0E7035614E144133A") > -1) {
+			supplyModel = "Infinite"
+		}
+		else {
+			supplyModel = "Unknown"
+		};
+
+		if (typeData._nonFungible == true) {
+			fungibilityTag = "Non-Fungible Token";
+			fungibilityID = 18;
+			fungibilitySlug = "nft";
+		}
+		else {
+			fungibilityTag = "Fungible Token";
+			fungibilityID = 19;
+			fungibilitySlug = "ft";
+		};
+		// console.log(fungibilityID,fungibilityTag, fungibilitySlug);
+
 						
-		var newAssetDocument = {
-			"assetID" : assetID.slice(2,18),
-			"assetIndex" : assetID.slice(51,66),
-			"assetIDfull" : assetID,
-			"name" : typeData._name,
-			"meltValue" : typeData._meltValue/1000000000000000000,
-			"totalSupply" : typeData._totalSupply,
-			"circulatingSupply" : typeData._circulatingSupply,
-			"transferFeeData" : typeData._transferFeeData.map(Number),
-			"meltFeeRatio" : parseInt(typeData._meltFeeRatio),
-			"creator" : typeData._creator,
-			"nonFungible" : typeData._nonFungible,
-			"genBlock" : blockNumber,
-			"lastUpdatedAtBlock" : blockNumber
+		// var newAssetDocument = {
+		// 	"assetID" : assetID.slice(2,18),
+		// 	"assetIndex" : assetID.slice(51,66),
+		// 	"assetIDfull" : assetID,
+		// 	"name" : typeData._name,
+		// 	"meltValue" : typeData._meltValue/1000000000000000000,
+		// 	"totalSupply" : typeData._totalSupply,
+		// 	"circulatingSupply" : typeData._circulatingSupply,
+		// 	"transferFeeData" : typeData._transferFeeData.map(Number),
+		// 	"meltFeeRatio" : parseInt(typeData._meltFeeRatio),
+		// 	"creator" : typeData._creator,
+		// 	"nonFungible" : typeData._nonFungible,
+		// 	"genBlock" : blockNumber,
+		// 	"lastUpdatedAtBlock" : blockNumber
+		// };
+		
+		name = typeData._name;
+		id = assetID.slice(2,18).toString();
+		price = (typeData._meltValue/1000000000000000000).toString();
+
+		var newAssetData = {
+			"name": name,
+			"sku" : id,
+			"stock_status": "outofstock",
+			"virtual": true,
+			"regular_price": price,
+			"type": "simple",
+			"short_description": typeData._name,
+			"categories": [
+				{
+					"id": 109,
+					"name": "Development",
+					"slug": "development"
+				},
+				{
+					"id": 16,
+					"name": "Uncategorized",
+					"slug": "uncategorized"
+				}
+			],
+			"tags": [
+			  {
+				"id": 49,
+				"name": "ERC-1155",
+				"slug": "erc-1155"
+			  },
+			  {
+				"id": fungibilityID,
+				"name": fungibilityTag,
+				"slug": fungibilitySlug
+			  }
+			],
+			"attributes": [{
+				"id":1,
+				"name":"Melt Value",
+				"position":0,
+				"visible":true,
+				"variation":false,
+				"options":[typeData._meltValue/1000000000000000000+" ENJ"]
+				},
+				{
+				"id":3,
+				"name":"Supply Model",
+				"position":1,
+				"visible":true,
+				"variation":false,
+				"options":[supplyModel]
+				},
+				{
+				"id":6,
+				"name":"Total Supply",
+				"position":2,
+				"visible":true,
+				"variation":false,
+				"options":[typeData._totalSupply]
+				},
+				{
+				"id":5,
+				"name":"Circulating Supply",
+				"position":3,
+				"visible":true,
+				"variation":false,
+				"options":[typeData._circulatingSupply]
+				},
+				{
+				"id":2,
+				"name":"Creator",
+				"position":4,
+				"visible":true,
+				"variation":false,
+				"options":[typeData._creator]
+				},
+				{
+				"id":9,
+				"name":"Creator Melting Fee",
+				"position":5,
+				"visible":true,
+				"variation":false,
+				"options":[typeData._meltFeeRatio/100+"%"]
+				},
+				{
+				"id":8,
+				"name":"Transfer Fee",
+				"position":6,
+				"visible":true,
+				"variation":false,
+				"options":[transferFee +" ENJ"]
+				},
+				{
+				"id":4,
+				"name":"Transfer Fee Type",
+				"position":7,
+				"visible":true,
+				"variation":false,
+				"options":[transferFeeType]
+				},
+				{
+				"id":7,
+				"name":"Token ID",
+				"position":8,
+				"visible":true,
+				"variation":false,
+				"options":[assetID]
+				},
+				{
+				"id": 10,
+				"name": "Genesis Block",
+				"position": 9,
+				"visible": true,
+				"variation": false,
+				"options": [blockNumber]
+				}
+			],
+			// "images": [
+			//   {
+			// 	"id": 6237024,
+			// 	"src": "https:\/\/mzkz.xyz\/wp-content\/uploads\/2019\/03\/TokenInDev_Placeholder.png"
+			//   }
+			// ],
+			"meta_data": [
+				// {
+				// 	"id": 834582,
+				// 	"key": "fifu_image_url",
+				// 	"value": "https:\/\/mzkz.xyz\/wp-content\/uploads\/2019\/03\/TokenInDev_Placeholder.png"
+				// },
+				{
+					"id": 834583,
+					"key": "_cryptocurrency_product_for_woocommerce_cryptocurrency_product_type",
+					"value": "yes"
+				},
+				{
+					"id": 834584,
+					"key": "_select_cryptocurrency_option",
+					"value": "ERC20"
+				}
+			]
+		  };
+
+		let WCuri = "https://mzkz.xyz/wp-json/wc/v3/products/";
+
+		var options = {
+			method: 'POST',
+			headers: {
+				'Authorization': "Basic Y2tfOGY4MTdmNTI4Y2ZjOTExYzEzOTc4OGJmOGFhNDZmNTA1YTllOWM4YTpjc180OTdmNDRiY2YwMzAzNGEzZTY0YmU3NzIzYWUzM2QyNjhlMDcwZjFh"
+			},
+			uri: WCuri,
+			body: newAssetData,
+			json: true // Automatically stringifies the body to JSON
 		};
 		
-		var db = client.db('mzkz');
-		db.collection("erc1155_assets").insertOne(newAssetDocument);
+		rp(options)
+			.then(function (parsedBody) {
+				// POST succeeded...
+				console.log("Success in posting product")
+			})
+			.catch(function (err) {
+				// POST failed...
+				console.log("Error: Failure in posting product")
+				console.log(err)
+			});
 
+
+		// var db = client.db('mzkz');
+		// //db.collection("erc1155_assets").insertOne(newAssetDocument);
+
+		// WooCommerce.post('products', newAssetDocument, function(err, newAssetDocument, res) {
+		// 	// console.log(res);
+		//   });
 		counter++;
 	}
     
@@ -364,165 +587,733 @@ async function setURIparser(events) {
 	for (let i=0; i<events.length; i++) {
 		let eventObj = events[i];
 		let assetID = eventObj.topics[1];
-		let blockNumber = eventObj.blockNumber;
+		let blockNumber = eventObj.blockNumber.toString();
 		let uriJSON = await getURI(assetID);
 		let [poptURI, isJSONRecognizedByURI, assetHost, assetCategory, assetTags] = populateURI(uriJSON, assetID);
 		let typeData = await getTypeData(assetID);
 		let poptURLcors = "http://cors.io/?u=" + encodeURIComponent( poptURI );
 	
+		let transferFeeArray = typeData._transferFeeData.map(Number);
+		let transferFee = (transferFeeArray[2]/1000000000000000000).toString();
+
+		if (transferFeeArray[0]==0) {
+			transferFeeType = "None"
+		}
+		else if (transferFeeArray[0]==1) {
+			transferFeeType = "Per Transfer"
+		}
+		else {
+			transferFeeType = "Unknown"
+		};
+
+		if ( typeData._supplyModel.indexOf("0x03EC388fb9Aef6442C7372DB3C6b7EEd93469c0B") > -1) {
+			supplyModel = "Collapsing"
+		}
+		else if ( typeData._supplyModel.indexOf("0x0000000000000000000000000000000000000000") > -1) {
+			supplyModel = "Fixed"
+		}
+		else if ( typeData._supplyModel.indexOf("0XE7BB8A81F070E69EAB9AFAB0E7035614E144133A") > -1) {
+			supplyModel = "Infinite"
+		}
+		else {
+			supplyModel = "Unknown"
+		};
+
+		if (typeData._nonFungible == true) {
+			fungibilityTag = "Non-Fungible Token";
+			fungibilityID = 18;
+			fungibilitySlug = "nft";
+		}
+		else {
+			fungibilityTag = "Fungible Token";
+			fungibilityID = 19;
+			fungibilitySlug = "ft";
+		};
+
 		var options = {
 			uri: poptURI,
 			json: true // Automatically stringifies the body to JSON
 		};
-		 
-		rp(options)
-		.then(function (assetJSON) {
-				// Request succeeded...
-				assetJSON = assetJSON;
-				URIassetName = assetJSON.name;
-				URIassetImageURL = assetJSON.image;
-				URIassetDescription = assetJSON.description;
-				URIassetProperties = assetJSON.properties;  
-				
-				var db = client.db('mzkz');
-				var myquery = { "assetID": assetID.slice(2,18) };
-				var newvalues = { $set: {
-					"assetID" : assetID.slice(2,18),
-					"assetIndex" : assetID.slice(51,66),
-					"assetIDfull" : assetID,
-					"name" : typeData._name,
-					"meltValue" : typeData._meltValue/1000000000000000000,
-					"totalSupply" : typeData._totalSupply,
-					"circulatingSupply" : typeData._circulatingSupply,
-					"transferFeeData" : typeData._transferFeeData.map(Number),
-					"meltFeeRatio" : parseInt(typeData._meltFeeRatio),
-					"creator" : typeData._creator,
-					"nonFungible" : typeData._nonFungible,
-					"URI" : uriJSON,
-					"popURI" : poptURI,
-					"isRecognizedByURI" : isJSONRecognizedByURI,
-					"host" : assetHost,
-					"category" :assetCategory,
-					"tags" : assetTags,
-					"nameFromURI" : URIassetName,
-					"image" : URIassetImageURL,
-					"description" : URIassetDescription,
-					"properties" : URIassetProperties,
-					"lastUpdatedAtBlock" : blockNumber,
-					"JSONdataErr" : false,
-					"JSONdata" : assetJSON
-				}};
-				//console.log(poptURI);
-				db.collection("erc1155_assets").updateOne(myquery, newvalues, function(err, res) {
-					if (err) throw err;
-					//console.log("1 document updated");
-				  });
-			})
-		.catch(function (err) {
-			// request failed...try another method
-			console.log("Error! The function rp() failed for ", typeData._name, " with ID ", assetID, " Trying getJSON() instead.");
-			getJSON(poptURI)
-			.then(function(assetJSON) {
-				// Request succeeded...
-				assetJSON = assetJSON;
-				URIassetName = assetJSON.name;
-				URIassetImageURL = assetJSON.image;
-				URIassetDescription = assetJSON.description;
-				URIassetProperties = assetJSON.properties;  
-				
-				var db = client.db('mzkz');
-				var myquery = { "assetID": assetID.slice(2,18) };
-				var newvalues = { $set: {
-					"assetID" : assetID.slice(2,18),
-					"assetIndex" : assetID.slice(51,66),
-					"assetIDfull" : assetID,
-					"name" : typeData._name,
-					"meltValue" : typeData._meltValue/1000000000000000000,
-					"totalSupply" : typeData._totalSupply,
-					"circulatingSupply" : typeData._circulatingSupply,
-					"transferFeeData" : typeData._transferFeeData.map(Number),
-					"meltFeeRatio" : parseInt(typeData._meltFeeRatio),
-					"creator" : typeData._creator,
-					"nonFungible" : typeData._nonFungible,
-					"URI" : uriJSON,
-					"popURI" : poptURI,
-					"isRecognizedByURI" : isJSONRecognizedByURI,
-					"host" : assetHost,
-					"category" :assetCategory,
-					"tags" : assetTags,
-					"nameFromURI" : URIassetName,
-					"image" : URIassetImageURL,
-					"description" : URIassetDescription,
-					"properties" : URIassetProperties,
-					"lastUpdatedAtBlock" : blockNumber,
-					"JSONdataErr" : false,
-					"JSONdata" : assetJSON
-				}};
-				//console.log(poptURI);
-				db.collection("erc1155_assets").updateOne(myquery, newvalues, function(err, res) {
-					if (err) throw err;
-				});
-			}).catch(function(error) {
-				//trying a third method to get the JSON data
-				console.log("The function getJSON() failed for ", typeData._name, " with ID ", assetID, " Trying curl.get() instead.");
-				
-				curl.get(poptURLcors)
-				.then(({statusCode, body, headers}) => {
-									// Request succeeded...
-				assetJSON = assetJSON;
-				URIassetName = assetJSON.name;
-				URIassetImageURL = assetJSON.image;
-				URIassetDescription = assetJSON.description;
-				URIassetProperties = assetJSON.properties;  
-				
-				var db = client.db('mzkz');
-				var myquery = { "assetID": assetID.slice(2,18) };
-				var newvalues = { $set: {
-					"assetID" : assetID.slice(2,18),
-					"assetIndex" : assetID.slice(51,66),
-					"assetIDfull" : assetID,
-					"name" : typeData._name,
-					"meltValue" : typeData._meltValue/1000000000000000000,
-					"totalSupply" : typeData._totalSupply,
-					"circulatingSupply" : typeData._circulatingSupply,
-					"transferFeeData" : typeData._transferFeeData.map(Number),
-					"meltFeeRatio" : parseInt(typeData._meltFeeRatio),
-					"creator" : typeData._creator,
-					"nonFungible" : typeData._nonFungible,
-					"URI" : uriJSON,
-					"popURI" : poptURI,
-					"isRecognizedByURI" : isJSONRecognizedByURI,
-					"host" : assetHost,
-					"category" :assetCategory,
-					"tags" : assetTags,
-					"nameFromURI" : URIassetName,
-					"image" : URIassetImageURL,
-					"description" : URIassetDescription,
-					"properties" : URIassetProperties,
-					"lastUpdatedAtBlock" : blockNumber,
-					"JSONdataErr" : false,
-					"JSONdata" : assetJSON
-				}};
-				//console.log(poptURI);
-				db.collection("erc1155_assets").updateOne(myquery, newvalues, function(err, res) {
-					if (err) throw err;
-				});
-				})
-				.catch((e) => {
-					// request failed...attempting to flag the document for manual update
+
+		
+		let productLookupString = "products?sku=" + assetID.slice(2,18);
+		// console.log(productLookupString);
+
+		let wpProductIDjson = await lookupWPproudctIDbyAssetID(productLookupString);
+		let wpProductID = wpProductIDjson[0].id;
+		let productString = ("products/" + wpProductID);
+		// console.log(productString);
+
+		// WooCommerce.get(productLookupString, function(err, data, res) {
+		// 	var obj = JSON.parse(res);
+		// 	wpProductID = obj[0].id;
+		// 	let productString = ("products/" + wpProductID);
+		// 	// console.log(productString);
+
+
+			rp(options)
+			.then(function (assetJSON) {
+					// Request succeeded...
+					assetJSON = assetJSON;
+					URIassetName = assetJSON.name;
+					URIassetImageURL = assetJSON.image;
+					URIassetDescription = assetJSON.description;
+					URIassetProperties = assetJSON.properties; 
+					
+					shortDesc = ("<h3>"+typeData._name+"</h3><p>"+URIassetDescription+"</p>").toString();
+					
+					var newvalues = {
+						// "name" : URIassetName,
+						"short_description": shortDesc,
+						// "description": URIassetDescription,
+						// "categories": [
+						// 	{
+						// 		"id": 16,
+						// 		"name": "Uncategorized",
+						// 		"slug": "uncategorized"
+						// 	}
+						// ],
+						// "images": [
+						// 	{
+						// 		"id": 6237026,
+						// 	  "src": "https:\/\/mzkz.xyz\/wp-content\/uploads\/2019\/03\/TokenNeedsApproval_Placeholder.png"
+						// 	}
+						//   ],
+						"meta_data": [
+							{
+								"id": 834582,
+								"key": "fifu_image_url",
+								"value": URIassetImageURL
+							},
+							{
+								"id": 836863,
+								"key": "_wcj_custom_product_tabs_title_local_1",
+								"value": "Image URL"
+							},
+							{
+								"id": 836864,
+								"key": "_wcj_custom_product_tabs_key_local_1",
+								"value": "local_1"
+							},
+							{
+								"id": 836865,
+								"key": "_wcj_custom_product_tabs_priority_local_1",
+								"value": "50"
+							},
+							{
+								"id": 836866,
+								"key": "_wcj_custom_product_tabs_content_local_1",
+								"value": URIassetImageURL
+							},
+							{
+								"id": 836867,
+								"key": "_wcj_custom_product_tabs_link_local_1",
+								"value": ""
+							},
+							{
+								"id": 836868,
+								"key": "_wcj_custom_product_tabs_link_new_tab_local_1",
+								"value": "no"
+							},
+							{
+								"id": 836869,
+								"key": "_wcj_custom_product_tabs_local_total_number",
+								"value": "1"
+							}
+						],
+						"attributes": [{
+							"id":1,
+							"name":"Melt Value",
+							"position":0,
+							"visible":true,
+							"variation":false,
+							"options":[typeData._meltValue/1000000000000000000+" ENJ"]
+							},
+							{
+							"id":3,
+							"name":"Supply Model",
+							"position":1,
+							"visible":true,
+							"variation":false,
+							"options":[supplyModel]
+							},
+							{
+							"id":6,
+							"name":"Total Supply",
+							"position":2,
+							"visible":true,
+							"variation":false,
+							"options":[typeData._totalSupply]
+							},
+							{
+							"id":5,
+							"name":"Circulating Supply",
+							"position":3,
+							"visible":true,
+							"variation":false,
+							"options":[typeData._circulatingSupply]
+							},
+							{
+							"id":2,
+							"name":"Creator",
+							"position":4,
+							"visible":true,
+							"variation":false,
+							"options":[typeData._creator]
+							},
+							{
+							"id":9,
+							"name":"Creator Melting Fee",
+							"position":5,
+							"visible":true,
+							"variation":false,
+							"options":[typeData._meltFeeRatio/100+"%"]
+							},
+							{
+							"id":8,
+							"name":"Transfer Fee",
+							"position":6,
+							"visible":true,
+							"variation":false,
+							"options":[transferFee +" ENJ"]
+							},
+							{
+							"id":4,
+							"name":"Transfer Fee Type",
+							"position":7,
+							"visible":true,
+							"variation":false,
+							"options":[transferFeeType]
+							},
+							{
+							"id":7,
+							"name":"Token ID",
+							"position":8,
+							"visible":true,
+							"variation":false,
+							"options":[assetID]
+							},
+							{
+							"id": 11,
+							"name": "Most Recent Update",
+							"position": 10,
+							"visible": true,
+							"variation": false,
+							"options": [blockNumber]
+							}
+						]
+					};	
+
+
+					let WCuri = "https://mzkz.xyz/wp-json/wc/v3/" + productString;
+
+					var options = {
+						method: 'PUT',
+						headers: {
+							'Authorization': "Basic Y2tfOGY4MTdmNTI4Y2ZjOTExYzEzOTc4OGJmOGFhNDZmNTA1YTllOWM4YTpjc180OTdmNDRiY2YwMzAzNGEzZTY0YmU3NzIzYWUzM2QyNjhlMDcwZjFh"
+						},
+						uri: WCuri,
+						body: newvalues,
+						json: true // Automatically stringifies the body to JSON
+					};
+					
+					rp(options)
+						.then(function (parsedBody) {
+							// POST succeeded...
+							console.log("Success in updating URI")
+						})
+						.catch(function (err) {
+							// POST failed...
+							console.log("Error: Failure in updating URI")
+							console.log(err)
+						});
+
+					// WooCommerce.put(productString, newvalues, function(err, newvalues, res) {
+					// 	//console.log(res);
+					//   });
+					
 					var db = client.db('mzkz');
 					var myquery = { "assetID": assetID.slice(2,18) };
-					var newvalues = { $set: {
-						"JSONdataErr" : true
-					}};
-					db.collection("erc1155_assets").updateOne(myquery, newvalues, function(err, res) {
-						if (err) throw err;
-						console.log("curl.get() call failed. The document ", typeData._name, " with ID ", assetID, " was flagged for manual update");
-					});
-					console.log(error);
-					});
-			});
-		});
+					// var newvalues = { $set: {
+					// 	"assetID" : assetID.slice(2,18),
+					// 	"assetIndex" : assetID.slice(51,66),
+					// 	"assetIDfull" : assetID,
+					// 	"name" : typeData._name,
+					// 	"meltValue" : typeData._meltValue/1000000000000000000,
+					// 	"totalSupply" : typeData._totalSupply,
+					// 	"circulatingSupply" : typeData._circulatingSupply,
+					// 	"transferFeeData" : typeData._transferFeeData.map(Number),
+					// 	"meltFeeRatio" : parseInt(typeData._meltFeeRatio),
+					// 	"creator" : typeData._creator,
+					// 	"nonFungible" : typeData._nonFungible,
+					// 	"URI" : uriJSON,
+					// 	"popURI" : poptURI,
+					// 	"isRecognizedByURI" : isJSONRecognizedByURI,
+					// 	"host" : assetHost,
+					// 	"category" :assetCategory,
+					// 	"tags" : assetTags,
+					// 	"nameFromURI" : URIassetName,
+					// 	"image" : URIassetImageURL,
+					// 	"description" : URIassetDescription,
+					// 	"properties" : URIassetProperties,
+					// 	"lastUpdatedAtBlock" : blockNumber,
+					// 	"JSONdataErr" : false,
+					// 	"JSONdata" : assetJSON
+					// }};
+					// db.collection("erc1155_assets").updateOne(myquery, newvalues, function(err, res) {
+					// 	if (err) throw err;
+					//   });
+	
+				})
+			.catch(function (err) {
+				// request failed...try another method
+				//console.log("Error! The function rp() failed for ", typeData._name, " with ID ", assetID, " Trying getJSON() instead.");
+				getJSON(poptURI)
+				.then(function(assetJSON) {
+					// Request succeeded...
+					assetJSON = assetJSON;
+					URIassetName = assetJSON.name;
+					URIassetImageURL = assetJSON.image;
+					URIassetDescription = assetJSON.description;
+					URIassetProperties = assetJSON.properties;  
+					shortDesc = ("<h3>"+typeData._name+"</h3><p>"+URIassetDescription+"</p>").toString();
+					
+					var newvalues = {
+						// "name" : URIassetName,
+						"short_description": shortDesc,
+						// "description": URIassetDescription,
+						// "categories": [
+						// 	{
+						// 		"id": 16,
+						// 		"name": "Uncategorized",
+						// 		"slug": "uncategorized"
+						// 	}
+						// ],
+						// "images": [
+						// 	{
+						// 		"id": 6237026,
+						// 	  "src": "https:\/\/mzkz.xyz\/wp-content\/uploads\/2019\/03\/TokenNeedsApproval_Placeholder.png"
+						// 	}
+						//   ],
+						"meta_data": [
+							{
+								"id": 834582,
+								"key": "fifu_image_url",
+								"value": URIassetImageURL
+							},
+							{
+								"id": 836863,
+								"key": "_wcj_custom_product_tabs_title_local_1",
+								"value": "Image URL"
+							},
+							{
+								"id": 836864,
+								"key": "_wcj_custom_product_tabs_key_local_1",
+								"value": "local_1"
+							},
+							{
+								"id": 836865,
+								"key": "_wcj_custom_product_tabs_priority_local_1",
+								"value": "50"
+							},
+							{
+								"id": 836866,
+								"key": "_wcj_custom_product_tabs_content_local_1",
+								"value": URIassetImageURL
+							},
+							{
+								"id": 836867,
+								"key": "_wcj_custom_product_tabs_link_local_1",
+								"value": ""
+							},
+							{
+								"id": 836868,
+								"key": "_wcj_custom_product_tabs_link_new_tab_local_1",
+								"value": "no"
+							},
+							{
+								"id": 836869,
+								"key": "_wcj_custom_product_tabs_local_total_number",
+								"value": "1"
+							}
+						],
+						"attributes": [{
+							"id":1,
+							"name":"Melt Value",
+							"position":0,
+							"visible":true,
+							"variation":false,
+							"options":[typeData._meltValue/1000000000000000000+" ENJ"]
+							},
+							{
+							"id":3,
+							"name":"Supply Model",
+							"position":1,
+							"visible":true,
+							"variation":false,
+							"options":[supplyModel]
+							},
+							{
+							"id":6,
+							"name":"Total Supply",
+							"position":2,
+							"visible":true,
+							"variation":false,
+							"options":[typeData._totalSupply]
+							},
+							{
+							"id":5,
+							"name":"Circulating Supply",
+							"position":3,
+							"visible":true,
+							"variation":false,
+							"options":[typeData._circulatingSupply]
+							},
+							{
+							"id":2,
+							"name":"Creator",
+							"position":4,
+							"visible":true,
+							"variation":false,
+							"options":[typeData._creator]
+							},
+							{
+							"id":9,
+							"name":"Creator Melting Fee",
+							"position":5,
+							"visible":true,
+							"variation":false,
+							"options":[typeData._meltFeeRatio/100+"%"]
+							},
+							{
+							"id":8,
+							"name":"Transfer Fee",
+							"position":6,
+							"visible":true,
+							"variation":false,
+							"options":[transferFee +" ENJ"]
+							},
+							{
+							"id":4,
+							"name":"Transfer Fee Type",
+							"position":7,
+							"visible":true,
+							"variation":false,
+							"options":[transferFeeType]
+							},
+							{
+							"id":7,
+							"name":"Token ID",
+							"position":8,
+							"visible":true,
+							"variation":false,
+							"options":[assetID]
+							},
+							{
+							"id": 11,
+							"name": "Most Recent Update",
+							"position": 10,
+							"visible": true,
+							"variation": false,
+							"options": [blockNumber]
+							}
+						]
+					};		
+
+					let WCuri = "https://mzkz.xyz/wp-json/wc/v3/" + productString;
+
+					var options = {
+						method: 'PUT',
+						headers: {
+							'Authorization': "Basic Y2tfOGY4MTdmNTI4Y2ZjOTExYzEzOTc4OGJmOGFhNDZmNTA1YTllOWM4YTpjc180OTdmNDRiY2YwMzAzNGEzZTY0YmU3NzIzYWUzM2QyNjhlMDcwZjFh"
+						},
+						uri: WCuri,
+						body: newvalues,
+						json: true // Automatically stringifies the body to JSON
+					};
+					
+					rp(options)
+						.then(function (parsedBody) {
+							// POST succeeded...
+							console.log("Success in updating URI")
+						})
+						.catch(function (err) {
+							// POST failed...
+							console.log("Error: Failure in updating URI")
+							console.log(err)
+						});
+
+					// WooCommerce.put(productString, newvalues, function(err, newvalues, res) {
+					// 	//console.log(res);
+					//   });
+					
+					// var db = client.db('mzkz');
+					// var myquery = { "assetID": assetID.slice(2,18) };
+					// var newvalues = { $set: {
+					// 	"assetID" : assetID.slice(2,18),
+					// 	"assetIndex" : assetID.slice(51,66),
+					// 	"assetIDfull" : assetID,
+					// 	"name" : typeData._name,
+					// 	"meltValue" : typeData._meltValue/1000000000000000000,
+					// 	"totalSupply" : typeData._totalSupply,
+					// 	"circulatingSupply" : typeData._circulatingSupply,
+					// 	"transferFeeData" : typeData._transferFeeData.map(Number),
+					// 	"meltFeeRatio" : parseInt(typeData._meltFeeRatio),
+					// 	"creator" : typeData._creator,
+					// 	"nonFungible" : typeData._nonFungible,
+					// 	"URI" : uriJSON,
+					// 	"popURI" : poptURI,
+					// 	"isRecognizedByURI" : isJSONRecognizedByURI,
+					// 	"host" : assetHost,
+					// 	"category" :assetCategory,
+					// 	"tags" : assetTags,
+					// 	"nameFromURI" : URIassetName,
+					// 	"image" : URIassetImageURL,
+					// 	"description" : URIassetDescription,
+					// 	"properties" : URIassetProperties,
+					// 	"lastUpdatedAtBlock" : blockNumber,
+					// 	"JSONdataErr" : false,
+					// 	"JSONdata" : assetJSON
+					// }};
+					// //console.log(poptURI);
+					// db.collection("erc1155_assets").updateOne(myquery, newvalues, function(err, res) {
+					// 	if (err) throw err;
+					// });
+				}).catch(function(error) {
+					//trying a third method to get the JSON data
+					console.log("The function getJSON() failed for ", typeData._name, " with ID ", assetID, " Trying curl.get() instead.");
+					
+					curl.get(poptURLcors)
+					.then(({statusCode, body, headers}) => {
+										// Request succeeded...
+					assetJSON = assetJSON;
+					URIassetName = assetJSON.name;
+					URIassetImageURL = assetJSON.image;
+					URIassetDescription = assetJSON.description;
+					URIassetProperties = assetJSON.properties;  
+					shortDesc = ("<h3>"+typeData._name+"</h3><p>"+URIassetDescription+"</p>").toString();
+					
+					var newvalues = {
+						// "name" : URIassetName,
+						"short_description": shortDesc,
+						// "description": URIassetDescription,
+						// "categories": [
+						// 	{
+						// 		"id": 16,
+						// 		"name": "Uncategorized",
+						// 		"slug": "uncategorized"
+						// 	}
+						// ],
+						// "images": [
+						// 	{
+						// 		"id": 6237026,
+						// 	  "src": "https:\/\/mzkz.xyz\/wp-content\/uploads\/2019\/03\/TokenNeedsApproval_Placeholder.png"
+						// 	}
+						//   ],
+						"meta_data": [
+							{
+								"id": 834582,
+								"key": "fifu_image_url",
+								"value": URIassetImageURL
+							},
+							{
+								"id": 836863,
+								"key": "_wcj_custom_product_tabs_title_local_1",
+								"value": "Image URL"
+							},
+							{
+								"id": 836864,
+								"key": "_wcj_custom_product_tabs_key_local_1",
+								"value": "local_1"
+							},
+							{
+								"id": 836865,
+								"key": "_wcj_custom_product_tabs_priority_local_1",
+								"value": "50"
+							},
+							{
+								"id": 836866,
+								"key": "_wcj_custom_product_tabs_content_local_1",
+								"value": URIassetImageURL
+							},
+							{
+								"id": 836867,
+								"key": "_wcj_custom_product_tabs_link_local_1",
+								"value": ""
+							},
+							{
+								"id": 836868,
+								"key": "_wcj_custom_product_tabs_link_new_tab_local_1",
+								"value": "no"
+							},
+							{
+								"id": 836869,
+								"key": "_wcj_custom_product_tabs_local_total_number",
+								"value": "1"
+							}
+						],
+						"attributes": [{
+							"id":1,
+							"name":"Melt Value",
+							"position":0,
+							"visible":true,
+							"variation":false,
+							"options":[typeData._meltValue/1000000000000000000+" ENJ"]
+							},
+							{
+							"id":3,
+							"name":"Supply Model",
+							"position":1,
+							"visible":true,
+							"variation":false,
+							"options":[supplyModel]
+							},
+							{
+							"id":6,
+							"name":"Total Supply",
+							"position":2,
+							"visible":true,
+							"variation":false,
+							"options":[typeData._totalSupply]
+							},
+							{
+							"id":5,
+							"name":"Circulating Supply",
+							"position":3,
+							"visible":true,
+							"variation":false,
+							"options":[typeData._circulatingSupply]
+							},
+							{
+							"id":2,
+							"name":"Creator",
+							"position":4,
+							"visible":true,
+							"variation":false,
+							"options":[typeData._creator]
+							},
+							{
+							"id":9,
+							"name":"Creator Melting Fee",
+							"position":5,
+							"visible":true,
+							"variation":false,
+							"options":[typeData._meltFeeRatio/100+"%"]
+							},
+							{
+							"id":8,
+							"name":"Transfer Fee",
+							"position":6,
+							"visible":true,
+							"variation":false,
+							"options":[transferFee +" ENJ"]
+							},
+							{
+							"id":4,
+							"name":"Transfer Fee Type",
+							"position":7,
+							"visible":true,
+							"variation":false,
+							"options":[transferFeeType]
+							},
+							{
+							"id":7,
+							"name":"Token ID",
+							"position":8,
+							"visible":true,
+							"variation":false,
+							"options":[assetID]
+							},
+							{
+							"id": 11,
+							"name": "Most Recent Update",
+							"position": 10,
+							"visible": true,
+							"variation": false,
+							"options": [blockNumber]
+							}
+						]
+					};	
+
+					let WCuri = "https://mzkz.xyz/wp-json/wc/v3/" + productString;
+
+					var options = {
+						method: 'PUT',
+						headers: {
+							'Authorization': "Basic Y2tfOGY4MTdmNTI4Y2ZjOTExYzEzOTc4OGJmOGFhNDZmNTA1YTllOWM4YTpjc180OTdmNDRiY2YwMzAzNGEzZTY0YmU3NzIzYWUzM2QyNjhlMDcwZjFh"
+						},
+						uri: WCuri,
+						body: newvalues,
+						json: true // Automatically stringifies the body to JSON
+					};
+					
+					rp(options)
+						.then(function (parsedBody) {
+							// POST succeeded...
+							console.log("Success in updating URI")
+						})
+						.catch(function (err) {
+							// POST failed...
+							console.log("Error: Failure in updating URI")
+							console.log(err)
+						});
+
+					// WooCommerce.put(productString, newvalues, function(err, newvalues, res) {
+					// 	//console.log(res);
+					//   });
+					
+					// var db = client.db('mzkz');
+					// var myquery = { "assetID": assetID.slice(2,18) };
+					// var newvalues = { $set: {
+					// 	"assetID" : assetID.slice(2,18),
+					// 	"assetIndex" : assetID.slice(51,66),
+					// 	"assetIDfull" : assetID,
+					// 	"name" : typeData._name,
+					// 	"meltValue" : typeData._meltValue/1000000000000000000,
+					// 	"totalSupply" : typeData._totalSupply,
+					// 	"circulatingSupply" : typeData._circulatingSupply,
+					// 	"transferFeeData" : typeData._transferFeeData.map(Number),
+					// 	"meltFeeRatio" : parseInt(typeData._meltFeeRatio),
+					// 	"creator" : typeData._creator,
+					// 	"nonFungible" : typeData._nonFungible,
+					// 	"URI" : uriJSON,
+					// 	"popURI" : poptURI,
+					// 	"isRecognizedByURI" : isJSONRecognizedByURI,
+					// 	"host" : assetHost,
+					// 	"category" :assetCategory,
+					// 	"tags" : assetTags,
+					// 	"nameFromURI" : URIassetName,
+					// 	"image" : URIassetImageURL,
+					// 	"description" : URIassetDescription,
+					// 	"properties" : URIassetProperties,
+					// 	"lastUpdatedAtBlock" : blockNumber,
+					// 	"JSONdataErr" : false,
+					// 	"JSONdata" : assetJSON
+					// }};
+					// //console.log(poptURI);
+					// db.collection("erc1155_assets").updateOne(myquery, newvalues, function(err, res) {
+					// 	if (err) throw err;
+					// });
+					})
+					.catch((e) => {
+						// request failed...attempting to flag the document for manual update
+						var db = client.db('mzkz');
+						var myquery = { "assetID": assetID.slice(2,18) };
+						var newvalues = { $set: {
+							"JSONdataErr" : true
+						}};
+						db.collection("erc1155_assets").updateOne(myquery, newvalues, function(err, res) {
+							if (err) throw err;
+							console.log("curl.get() call failed. The document ", typeData._name, " with ID ", assetID, " was flagged for manual update");
+						});
+						console.log(error);
+						});
+				});
+			// });
+	
+
+		  });
+
 		counter++;
 	};
 	console.log("Made ( " + counter + " / " + events.length + " ) updates to Asset Collection via setURI()");
@@ -593,6 +1384,34 @@ function loadURIfromTemplate(uriJSON, assetHost, assetID) {
 	console.log(poptJSON);
 
 	return [poptJSON, assetCategory, assetTags]
+}
+
+function lookupWPproudctIDbyAssetID(productLookupString) {
+
+	let WCuri = "https://mzkz.xyz/wp-json/wc/v3/" + productLookupString;
+
+	var options = {
+		method: 'GET',
+		headers: {
+			'Authorization': "Basic Y2tfOGY4MTdmNTI4Y2ZjOTExYzEzOTc4OGJmOGFhNDZmNTA1YTllOWM4YTpjc180OTdmNDRiY2YwMzAzNGEzZTY0YmU3NzIzYWUzM2QyNjhlMDcwZjFh"
+		},
+		uri: WCuri,
+		json: true // Automatically stringifies the body to JSON
+	};
+	
+	let wpProductIDjson = rp(options)
+		.then(function (wpProductIDjson) {
+			// GET succeeded...
+			console.log("Success in fetching WC product")
+			// console.log(wpProductIDjson)
+			return wpProductIDjson
+		})
+		.catch(function (err) {
+			// GET failed...
+			console.log("Error: Failure in fetching WC product")
+			// console.log(err)
+		});  
+	return wpProductIDjson	
 }
 
 function checkIfKnownByURIstring(uriJSON) {
