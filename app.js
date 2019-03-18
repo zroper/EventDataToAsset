@@ -402,6 +402,11 @@ async function createAssetParser(events) {
 				"id": fungibilityID,
 				"name": fungibilityTag,
 				"slug": fungibilitySlug
+			  },
+			  {
+				  "id": 7859,
+				  "name": "Token In Development",
+				  "slug": "token-in-development"
 			  }
 			],
 			"attributes": [{
@@ -483,6 +488,14 @@ async function createAssetParser(events) {
 				"visible": true,
 				"variation": false,
 				"options": [blockNumber]
+				},
+				{
+				"id": 12,
+				"name": "Recent Event Type",
+				"position": 11,
+				"visible": true,
+				"variation": false,
+				"options": ["create"]
 				}
 			],
 			// "images": [
@@ -674,13 +687,30 @@ async function setURIparser(events) {
 						"name" : URIassetName,
 						"short_description": shortDesc,
 						"description": URIassetDescription,
-						"categories": [
+						"tags": [
 							{
-								"id": 16,
-								"name": "Uncategorized",
-								"slug": "uncategorized"
+								"id": 49,
+								"name": "ERC-1155",
+								"slug": "erc-1155"
+							},
+							{
+								"id": fungibilityID,
+								"name": fungibilityTag,
+								"slug": fungibilitySlug
+							},
+							{
+								"id": 7860,
+								"name": "Token Requires Approval",
+								"slug": "token-requires-approval"
 							}
 						],
+						// "categories": [
+						// 	{
+						// 		"id": 16,
+						// 		"name": "Uncategorized",
+						// 		"slug": "uncategorized"
+						// 	}
+						// ],
 						// "images": [
 						// 	{
 						// 		"id": 6237026,
@@ -808,6 +838,14 @@ async function setURIparser(events) {
 							"visible": true,
 							"variation": false,
 							"options": [blockNumber]
+							},
+							{
+							"id": 12,
+							"name": "Recent Event Type",
+							"position": 11,
+							"visible": true,
+							"variation": false,
+							"options": ["setURI"]
 							}
 						]
 					};	
@@ -890,13 +928,30 @@ async function setURIparser(events) {
 						"name" : URIassetName,
 						"short_description": shortDesc,
 						"description": URIassetDescription,
-						"categories": [
+						"tags": [
 							{
-								"id": 16,
-								"name": "Uncategorized",
-								"slug": "uncategorized"
+								"id": 49,
+								"name": "ERC-1155",
+								"slug": "erc-1155"
+							},
+							{
+								"id": fungibilityID,
+								"name": fungibilityTag,
+								"slug": fungibilitySlug
+							},
+							{
+								"id": 7860,
+								"name": "Token Requires Approval",
+								"slug": "token-requires-approval"
 							}
 						],
+						// "categories": [
+						// 	{
+						// 		"id": 16,
+						// 		"name": "Uncategorized",
+						// 		"slug": "uncategorized"
+						// 	}
+						// ],
 						// "images": [
 						// 	{
 						// 		"id": 6237026,
@@ -1024,6 +1079,14 @@ async function setURIparser(events) {
 							"visible": true,
 							"variation": false,
 							"options": [blockNumber]
+							},
+							{
+							"id": 12,
+							"name": "Recent Event Type",
+							"position": 11,
+							"visible": true,
+							"variation": false,
+							"options": ["setURI"]
 							}
 						]
 					};		
@@ -1105,13 +1168,30 @@ async function setURIparser(events) {
 						"name" : URIassetName,
 						"short_description": shortDesc,
 						"description": URIassetDescription,
-						"categories": [
+						"tags": [
 							{
-								"id": 16,
-								"name": "Uncategorized",
-								"slug": "uncategorized"
+								"id": 49,
+								"name": "ERC-1155",
+								"slug": "erc-1155"
+							},
+							{
+								"id": fungibilityID,
+								"name": fungibilityTag,
+								"slug": fungibilitySlug
+							},
+							{
+								"id": 7860,
+								"name": "Token Requires Approval",
+								"slug": "token-requires-approval"
 							}
 						],
+						// "categories": [
+						// 	{
+						// 		"id": 16,
+						// 		"name": "Uncategorized",
+						// 		"slug": "uncategorized"
+						// 	}
+						// ],
 						// "images": [
 						// 	{
 						// 		"id": 6237026,
@@ -1239,6 +1319,14 @@ async function setURIparser(events) {
 							"visible": true,
 							"variation": false,
 							"options": [blockNumber]
+							},
+							{
+							"id": 12,
+							"name": "Recent Event Type",
+							"position": 11,
+							"visible": true,
+							"variation": false,
+							"options": ["setURI"]
 							}
 						]
 					};	
