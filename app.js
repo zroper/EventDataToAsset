@@ -191,7 +191,7 @@ async function watchEvents() {
 	let currBlockNumber = await getCurrBlockNumber();
 	let latestCompleteBlock = currBlockNumber - 1;
 	//let genBlock = 6043439; //ERC-1155 contract creation at txn:0x6e653115cacb3b8b226f6eff9234320c4e5f4e88e0988df2957a3bbca83ccb1b
-	let blockInterval = 1000;
+	let blockInterval = 1;
 	
 	//console.log(currBlockNumber, lastBlockNumber,blockInterval);	
 	
@@ -510,6 +510,14 @@ async function createAssetParser(events) {
 			]
 		  };
 
+
+		// let productLookupString = "products?sku=" + assetID.slice(2,18);
+
+		// let wpProductIDjson = await lookupWPproudctIDbyAssetID(productLookupString);
+		// let wpProductID = wpProductIDjson[0].id;
+		// let productString = ("products/" + wpProductID);  
+		// let WCuri = "https://mzkz.xyz/wp-json/wc/v3/" + productString;
+
 		let WCuri = "https://mzkz.xyz/wp-json/wc/v3/products/";
 
 		var options = {
@@ -663,16 +671,16 @@ async function setURIparser(events) {
 					shortDesc = ("<h3>"+typeData._name+"</h3><p>"+URIassetDescription+"</p>").toString();
 					
 					var newvalues = {
-						// "name" : URIassetName,
+						"name" : URIassetName,
 						"short_description": shortDesc,
-						// "description": URIassetDescription,
-						// "categories": [
-						// 	{
-						// 		"id": 16,
-						// 		"name": "Uncategorized",
-						// 		"slug": "uncategorized"
-						// 	}
-						// ],
+						"description": URIassetDescription,
+						"categories": [
+							{
+								"id": 16,
+								"name": "Uncategorized",
+								"slug": "uncategorized"
+							}
+						],
 						// "images": [
 						// 	{
 						// 		"id": 6237026,
@@ -879,16 +887,16 @@ async function setURIparser(events) {
 					shortDesc = ("<h3>"+typeData._name+"</h3><p>"+URIassetDescription+"</p>").toString();
 					
 					var newvalues = {
-						// "name" : URIassetName,
+						"name" : URIassetName,
 						"short_description": shortDesc,
-						// "description": URIassetDescription,
-						// "categories": [
-						// 	{
-						// 		"id": 16,
-						// 		"name": "Uncategorized",
-						// 		"slug": "uncategorized"
-						// 	}
-						// ],
+						"description": URIassetDescription,
+						"categories": [
+							{
+								"id": 16,
+								"name": "Uncategorized",
+								"slug": "uncategorized"
+							}
+						],
 						// "images": [
 						// 	{
 						// 		"id": 6237026,
@@ -1094,16 +1102,16 @@ async function setURIparser(events) {
 					shortDesc = ("<h3>"+typeData._name+"</h3><p>"+URIassetDescription+"</p>").toString();
 					
 					var newvalues = {
-						// "name" : URIassetName,
+						"name" : URIassetName,
 						"short_description": shortDesc,
-						// "description": URIassetDescription,
-						// "categories": [
-						// 	{
-						// 		"id": 16,
-						// 		"name": "Uncategorized",
-						// 		"slug": "uncategorized"
-						// 	}
-						// ],
+						"description": URIassetDescription,
+						"categories": [
+							{
+								"id": 16,
+								"name": "Uncategorized",
+								"slug": "uncategorized"
+							}
+						],
 						// "images": [
 						// 	{
 						// 		"id": 6237026,
