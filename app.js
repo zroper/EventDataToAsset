@@ -209,7 +209,7 @@ async function watchEvents() {
 			//var collection = "erc1155Events_create";
 			//console.log(events)
             //updateDDBFromEvents(db,collection,events);
-            // createAssetParser(events)
+            createAssetParser(events)
 		 });
 		
 		eventsMelt.then(function(events) {
@@ -257,7 +257,7 @@ async function watchEvents() {
 			var collection = "erc1155Events_create";
 			//console.log(events)
 			//updateDDBFromEvents(db,collection,events);
-			// createAssetParser(events)
+			createAssetParser(events)
 		 });
 		
 		eventsMelt.then(function(events) {
@@ -276,7 +276,7 @@ async function watchEvents() {
 			var collection = "erc1155Events_setURI";
 			//console.log(events)
 			//updateDDBFromEvents(db,collection,events);
-			// setURIparser(events);
+			setURIparser(events);
 		 });
 
 		 eventsTransfer.then(function(events) {
