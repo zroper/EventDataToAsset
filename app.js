@@ -191,7 +191,7 @@ async function watchEvents() {
 	let currBlockNumber = await getCurrBlockNumber();
 	let latestCompleteBlock = currBlockNumber - 1;
 	//let genBlock = 6043439; //ERC-1155 contract creation at txn:0x6e653115cacb3b8b226f6eff9234320c4e5f4e88e0988df2957a3bbca83ccb1b
-	let blockInterval = 1;
+	let blockInterval = 10;
 	
 	//console.log(currBlockNumber, lastBlockNumber,blockInterval);	
 	
@@ -209,7 +209,7 @@ async function watchEvents() {
 			//var collection = "erc1155Events_create";
 			//console.log(events)
             //updateDDBFromEvents(db,collection,events);
-            createAssetParser(events)
+            // createAssetParser(events)
 		 });
 		
 		eventsMelt.then(function(events) {
@@ -222,13 +222,14 @@ async function watchEvents() {
 			var collection = "erc1155Events_mint";
 			//console.log(events)
 			//updateDDBFromEvents(db,collection,events);
+			mintAssetParser(events);;
 		 });
 
 		 eventsSetURI.then(function(events) {
 			var collection = "erc1155Events_setURI";
 			//console.log(events)
 			//updateDDBFromEvents(db,collection,events);
-			setURIparser(events);
+			// setURIparser(events);
 		 });
 
 		 eventsTransfer.then(function(events) {
@@ -257,7 +258,7 @@ async function watchEvents() {
 			var collection = "erc1155Events_create";
 			//console.log(events)
 			//updateDDBFromEvents(db,collection,events);
-			createAssetParser(events)
+			// createAssetParser(events)
 		 });
 		
 		eventsMelt.then(function(events) {
@@ -270,13 +271,14 @@ async function watchEvents() {
 			var collection = "erc1155Events_mint";
 			//console.log(events)
 			//updateDDBFromEvents(db,collection,events);
+			mintAssetParser(events);
 		 });
 
 		 eventsSetURI.then(function(events) {
 			var collection = "erc1155Events_setURI";
 			//console.log(events)
 			//updateDDBFromEvents(db,collection,events);
-			setURIparser(events);
+			// setURIparser(events);
 		 });
 
 		 eventsTransfer.then(function(events) {
@@ -600,6 +602,276 @@ async function updateNameParser(events) {
 	}
     
 	console.log("Made ( " + counter + " / " + events.length + " ) updates to Asset Collection via updateName()");
+};
+
+/**
+ * updateDDBFromEvents() wil update DDB given event objects
+ *
+ * @param events {Array of Objects} Events to sync ddb with
+ */
+async function mintAssetParser(events) {
+	let counter = 0;
+		
+	for (let i=0; i<events.length; i++) {
+        let eventObj = events[i];
+		let assetID = eventObj.topics[1];
+		let typeData = await getTypeData(assetID);
+		let blockNumber = eventObj.blockNumber.toString();
+		// let wpProductID = StartingWPproductID + blockNumber + i * blockNumber;
+		// let productString = ("product/" + wpProductID);
+
+		let transferFeeArray = typeData._transferFeeData.map(Number);
+		let transferFee = (transferFeeArray[2]/1000000000000000000).toString();
+
+		if (transferFeeArray[0]==0) {
+			transferFeeType = "None"
+		}
+		else if (transferFeeArray[0]==1) {
+			transferFeeType = "Per Transfer"
+		}
+		else {
+			transferFeeType = "Unknown"
+		};
+
+		if ( typeData._supplyModel.indexOf("0x03EC388fb9Aef6442C7372DB3C6b7EEd93469c0B") > -1) {
+			supplyModel = "Collapsing"
+		}
+		else if ( typeData._supplyModel.indexOf("0x0000000000000000000000000000000000000000") > -1) {
+			supplyModel = "Fixed"
+		}
+		else if ( typeData._supplyModel.indexOf("0XE7BB8A81F070E69EAB9AFAB0E7035614E144133A") > -1) {
+			supplyModel = "Infinite"
+		}
+		else {
+			supplyModel = "Unknown"
+		};
+
+		if (typeData._nonFungible == true) {
+			fungibilityTag = "Non-Fungible Token";
+			fungibilityID = 18;
+			fungibilitySlug = "nft";
+		}
+		else {
+			fungibilityTag = "Fungible Token";
+			fungibilityID = 19;
+			fungibilitySlug = "ft";
+		};
+		// console.log(fungibilityID,fungibilityTag, fungibilitySlug);
+
+						
+		// var newAssetDocument = {
+		// 	"assetID" : assetID.slice(2,18),
+		// 	"assetIndex" : assetID.slice(51,66),
+		// 	"assetIDfull" : assetID,
+		// 	"name" : typeData._name,
+		// 	"meltValue" : typeData._meltValue/1000000000000000000,
+		// 	"totalSupply" : typeData._totalSupply,
+		// 	"circulatingSupply" : typeData._circulatingSupply,
+		// 	"transferFeeData" : typeData._transferFeeData.map(Number),
+		// 	"meltFeeRatio" : parseInt(typeData._meltFeeRatio),
+		// 	"creator" : typeData._creator,
+		// 	"nonFungible" : typeData._nonFungible,
+		// 	"genBlock" : blockNumber,
+		// 	"lastUpdatedAtBlock" : blockNumber
+		// };
+		
+		name = typeData._name;
+		id = assetID.slice(2,18).toString();
+		price = (typeData._meltValue/1000000000000000000).toString();
+
+		var newAssetData = {
+			// "name": name,
+			// "sku" : id,
+			// "stock_status": "outofstock",
+			// "virtual": true,
+			// "regular_price": price,
+			// "type": "simple",
+			// "short_description": typeData._name,
+			// "categories": [
+			// 	{
+			// 		"id": 109,
+			// 		"name": "Development",
+			// 		"slug": "development"
+			// 	},
+			// 	{
+			// 		"id": 16,
+			// 		"name": "Uncategorized",
+			// 		"slug": "uncategorized"
+			// 	}
+			// ],
+			// "tags": [
+			//   {
+			// 	"id": 49,
+			// 	"name": "ERC-1155",
+			// 	"slug": "erc-1155"
+			//   },
+			//   {
+			// 	"id": fungibilityID,
+			// 	"name": fungibilityTag,
+			// 	"slug": fungibilitySlug
+			//   },
+			//   {
+			// 	  "id": 7859,
+			// 	  "name": "Token In Development",
+			// 	  "slug": "token-in-development"
+			//   }
+			// ],
+			"attributes": [{
+				"id":1,
+				"name":"Melt Value",
+				"position":0,
+				"visible":true,
+				"variation":false,
+				"options":[typeData._meltValue/1000000000000000000+" ENJ"]
+				},
+				{
+				"id":3,
+				"name":"Supply Model",
+				"position":1,
+				"visible":true,
+				"variation":false,
+				"options":[supplyModel]
+				},
+				{
+				"id":6,
+				"name":"Total Supply",
+				"position":2,
+				"visible":true,
+				"variation":false,
+				"options":[typeData._totalSupply]
+				},
+				{
+				"id":5,
+				"name":"Circulating Supply",
+				"position":3,
+				"visible":true,
+				"variation":false,
+				"options":[typeData._circulatingSupply]
+				},
+				{
+				"id":2,
+				"name":"Creator",
+				"position":4,
+				"visible":true,
+				"variation":false,
+				"options":[typeData._creator]
+				},
+				{
+				"id":9,
+				"name":"Creator Melting Fee",
+				"position":5,
+				"visible":true,
+				"variation":false,
+				"options":[typeData._meltFeeRatio/100+"%"]
+				},
+				{
+				"id":8,
+				"name":"Transfer Fee",
+				"position":6,
+				"visible":true,
+				"variation":false,
+				"options":[transferFee +" ENJ"]
+				},
+				{
+				"id":4,
+				"name":"Transfer Fee Type",
+				"position":7,
+				"visible":true,
+				"variation":false,
+				"options":[transferFeeType]
+				},
+				{
+				"id":7,
+				"name":"Token ID",
+				"position":8,
+				"visible":true,
+				"variation":false,
+				"options":[assetID]
+				},
+				{
+				"id": 11,
+				"name": "Most Recent Update",
+				"position": 10,
+				"visible": true,
+				"variation": false,
+				"options": [blockNumber]
+				},
+				{
+				"id": 12,
+				"name": "Recent Event Type",
+				"position": 11,
+				"visible": true,
+				"variation": false,
+				"options": ["mint"]
+				}
+			]
+			// "images": [
+			//   {
+			// 	"id": 6237024,
+			// 	"src": "https:\/\/mzkz.xyz\/wp-content\/uploads\/2019\/03\/TokenInDev_Placeholder.png"
+			//   }
+			// ],
+			// "meta_data": [
+			// 	{
+			// 		"id": 834582,
+			// 		"key": "fifu_image_url",
+			// 		"value": "https:\/\/mzkz.xyz\/wp-content\/uploads\/2019\/03\/TokenInDev_Placeholder.png"
+			// 	},
+			// 	{
+			// 		"id": 834583,
+			// 		"key": "_cryptocurrency_product_for_woocommerce_cryptocurrency_product_type",
+			// 		"value": "yes"
+			// 	},
+			// 	{
+			// 		"id": 834584,
+			// 		"key": "_select_cryptocurrency_option",
+			// 		"value": "ERC20"
+			// 	}
+			// ]
+		  };
+
+
+		let productLookupString = "products?sku=" + assetID.slice(2,18);
+
+		let wpProductIDjson = await lookupWPproudctIDbyAssetID(productLookupString);
+		let wpProductID = wpProductIDjson[0].id;
+		let productString = ("products/" + wpProductID);  
+		let WCuri = "https://mzkz.xyz/wp-json/wc/v3/" + productString;
+
+		// let WCuri = "https://mzkz.xyz/wp-json/wc/v3/products/";
+
+		var options = {
+			method: 'PUT',
+			headers: {
+				'Authorization': "Basic Y2tfOGY4MTdmNTI4Y2ZjOTExYzEzOTc4OGJmOGFhNDZmNTA1YTllOWM4YTpjc180OTdmNDRiY2YwMzAzNGEzZTY0YmU3NzIzYWUzM2QyNjhlMDcwZjFh"
+			},
+			uri: WCuri,
+			body: newAssetData,
+			json: true // Automatically stringifies the body to JSON
+		};
+		
+		rp(options)
+			.then(function (parsedBody) {
+				// POST succeeded...
+				console.log("Success in udating product")
+			})
+			.catch(function (err) {
+				// POST failed...
+				console.log("Error: Failure in updating product")
+				console.log(err)
+			});
+
+
+		// var db = client.db('mzkz');
+		// //db.collection("erc1155_assets").insertOne(newAssetDocument);
+
+		// WooCommerce.post('products', newAssetDocument, function(err, newAssetDocument, res) {
+		// 	// console.log(res);
+		//   });
+		counter++;
+	}
+    
+	console.log("Made ( " + counter + " / " + events.length + " ) insertions to Asset Collection via mint()");
 };
 
 async function setURIparser(events) {
@@ -1406,7 +1678,6 @@ async function setURIparser(events) {
 						});
 				});
 			// });
-	
 
 		  });
 
