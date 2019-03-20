@@ -383,11 +383,11 @@ async function createAssetParser(events) {
 			"type": "simple",
 			"short_description": typeData._name,
 			"categories": [
-				{
-					"id": 109,
-					"name": "Development",
-					"slug": "development"
-				},
+				// {
+				// 	"id": 109,
+				// 	"name": "Development",
+				// 	"slug": "development"
+				// },
 				{
 					"id": 16,
 					"name": "Uncategorized",
