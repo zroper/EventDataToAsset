@@ -871,7 +871,7 @@ async function mintAssetParser(events) {
 		counter++;
 	}
     
-	console.log("Made ( " + counter + " / " + events.length + " ) insertions to Asset Collection via mint()");
+	console.log("Made ( " + counter + " / " + events.length + " ) updates to Asset Collection via mint()");
 };
 
 async function setURIparser(events) {
