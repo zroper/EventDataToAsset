@@ -520,8 +520,18 @@ async function createAssetParser(events) {
 				{
 					"id": 834584,
 					"key": "_select_cryptocurrency_option",
-					"value": "ERC20"
-				}
+					"value": "ERC1155"
+				},
+        {
+            "id": 934702,
+            "key": "_wcj_multicurrency_per_product_make_empty_ETH",
+            "value": "yes"
+        },
+        {
+            "id": 936354,
+            "key": "_wcj_multicurrency_per_product_make_empty_ENJ",
+            "value": "yes"
+        }
 			]
 		  };
 
@@ -825,7 +835,7 @@ async function mintAssetParser(events) {
 			// 	{
 			// 		"id": 834584,
 			// 		"key": "_select_cryptocurrency_option",
-			// 		"value": "ERC20"
+			// 		"value": "ERC1155"
 			// 	}
 			// ]
 		  };
