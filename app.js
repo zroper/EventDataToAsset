@@ -145,23 +145,23 @@ function connectToDBB(client) {
 	  }); 
 };
 
-async function syncFiles() {
-	// Synchronize files to most recent database document
-	var db = client.db('mzkz');
-	db.collection("erc1155_assets").find({}).sort({"blockNumber":-1}).limit(1)
-	.then(function (BlockToSync) {
-		console.log(BlockToSync)
-		fs.writeFile('StartBlock.txt', BlockToSync, (err) => {
-			if (err) throw err;
-		  });
-	})
-	.catch(function (err) {
-		// request failed...
-		console.log("Could not find the sync block! Will revert to default value written in StartBlock.txt.");
-	});
+// async function syncFiles() {
+// 	// Synchronize files to most recent database document
+// 	var db = client.db('mzkz');
+// 	db.collection("erc1155_assets").find({}).sort({"blockNumber":-1}).limit(1)
+// 	.then(function (BlockToSync) {
+// 		console.log(BlockToSync)
+// 		fs.writeFile('StartBlock.txt', BlockToSync, (err) => {
+// 			if (err) throw err;
+// 		  });
+// 	})
+// 	.catch(function (err) {
+// 		// request failed...
+// 		console.log("Could not find the sync block! Will revert to default value written in StartBlock.txt.");
+// 	});
 
 
-}
+// }
 
 //const assetID = "0x70800000000001b8000000000000000000000000000000000000000000000000";
 
@@ -379,7 +379,7 @@ async function createAssetParser(events) {
 			"sku" : id,
 			"stock_status": "outofstock",
 			"virtual": true,
-			"regular_price": price,
+			// "regular_price": price,
 			"type": "simple",
 			"short_description": typeData._name,
 			"categories": [
