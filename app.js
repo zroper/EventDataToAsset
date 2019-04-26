@@ -20,8 +20,8 @@ const options = {
 	connectTimeoutMS: 30000,
 	useNewUrlParser: true
 };
-const client = new MongoClient(uri, options);
-const db = new Db('mzkz', client);
+// const client = new MongoClient(uri, options);
+// const db = new Db('mzkz', client);
 const AssetCollection = db.collection("erc1155_assets");
 
 // const WooCommerce = new WooCommerceAPI({
