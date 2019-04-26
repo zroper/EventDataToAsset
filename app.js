@@ -12,17 +12,17 @@ const rp = require('request-promise');
 const curl = new (require( 'curl-request' ))();
 const Web3 = require('web3');
 const fs = require('fs');
-const MongoClient = require('mongodb').MongoClient;
-const Db = require('mongodb').Db;
-const uri = "mongodb+srv://mzkzUser:zW0Jx7me5JkWtEaJ@mzkz-dt9ay.mongodb.net/test?retryWrites=true";
-const options = {
-    keepAlive: 300000, 
-	connectTimeoutMS: 30000,
-	useNewUrlParser: true
-};
+// const MongoClient = require('mongodb').MongoClient;
+// const Db = require('mongodb').Db;
+// const uri = "mongodb+srv://mzkzUser:zW0Jx7me5JkWtEaJ@mzkz-dt9ay.mongodb.net/test?retryWrites=true";
+// const options = {
+//     keepAlive: 300000, 
+// 	connectTimeoutMS: 30000,
+// 	useNewUrlParser: true
+// };
 // const client = new MongoClient(uri, options);
 // const db = new Db('mzkz', client);
-const AssetCollection = db.collection("erc1155_assets");
+// const AssetCollection = db.collection("erc1155_assets");
 
 // const WooCommerce = new WooCommerceAPI({
 // 	url: 'https://mzkz.xyz',
@@ -133,17 +133,17 @@ const JSONtemplates = [	{
 ]
 
 // Application begins here
-connectToDBB(client,db);
+// connectToDBB(client,db);
 
-function connectToDBB(client) {
-	client.connect( function (err, client) {
-		if (err) throw err;
+// function connectToDBB(client) {
+// 	client.connect( function (err, client) {
+// 		if (err) throw err;
 
-		//syncFiles();
-		startWatching();
+// 		//syncFiles();
+// 		startWatching();
 
-	  }); 
-};
+// 	  }); 
+// };
 
 // async function syncFiles() {
 // 	// Synchronize files to most recent database document
@@ -171,6 +171,8 @@ function connectToDBB(client) {
  * startWatching() is the top level function to begin
  * the contract event watching
  */
+startWatching();
+
 async function startWatching() {
 	
 	let watching = true;
@@ -587,7 +589,7 @@ async function updateNameParser(events) {
 		let assetID = eventObj.topics[1];
 		let blockNumber = eventObj.blockNumber;
 		let typeData = await getTypeData(assetID);
-		var db = client.db('mzkz');
+		// var db = client.db('mzkz');
 		var myquery = { "assetID": assetID.slice(2,18) };
 		var newvalues = { $set: {
 			"assetID" : assetID.slice(2,18),
@@ -603,10 +605,10 @@ async function updateNameParser(events) {
 			"nonFungible" : typeData._nonFungible,
 			"lastUpdatedAtBlock" : blockNumber
 		}};
-		db.collection("erc1155_assets").updateOne(myquery, newvalues, function(err, res) {
-		  if (err) throw err;
-		  //console.log("1 document updated");
-		});
+		// db.collection("erc1155_assets").updateOne(myquery, newvalues, function(err, res) {
+		//   if (err) throw err;
+		//   //console.log("1 document updated");
+		// });
 		
 		counter++;
 	}
@@ -1160,8 +1162,8 @@ async function setURIparser(events) {
 					// 	//console.log(res);
 					//   });
 					
-					var db = client.db('mzkz');
-					var myquery = { "assetID": assetID.slice(2,18) };
+					// var db = client.db('mzkz');
+					// var myquery = { "assetID": assetID.slice(2,18) };
 					// var newvalues = { $set: {
 					// 	"assetID" : assetID.slice(2,18),
 					// 	"assetIndex" : assetID.slice(51,66),
@@ -1675,15 +1677,15 @@ async function setURIparser(events) {
 					})
 					.catch((e) => {
 						// request failed...attempting to flag the document for manual update
-						var db = client.db('mzkz');
-						var myquery = { "assetID": assetID.slice(2,18) };
-						var newvalues = { $set: {
-							"JSONdataErr" : true
-						}};
-						db.collection("erc1155_assets").updateOne(myquery, newvalues, function(err, res) {
-							if (err) throw err;
-							console.log("curl.get() call failed. The document ", typeData._name, " with ID ", assetID, " was flagged for manual update");
-						});
+						// var db = client.db('mzkz');
+						// var myquery = { "assetID": assetID.slice(2,18) };
+						// var newvalues = { $set: {
+						// 	"JSONdataErr" : true
+						// }};
+						// db.collection("erc1155_assets").updateOne(myquery, newvalues, function(err, res) {
+						// 	if (err) throw err;
+						// 	console.log("curl.get() call failed. The document ", typeData._name, " with ID ", assetID, " was flagged for manual update");
+						// });
 						console.log(error);
 						});
 				});
@@ -1832,26 +1834,26 @@ function checkIfKnownByCreator(creator) {
 //     });
 // };
 
-function readEventsFromDBB(db) {
+// function readEventsFromDBB(db) {
 	  
-	var db = client.db('mzkz');
+// 	var db = client.db('mzkz');
 	
-	db.collection('erc1155').findOne({}, function (findErr, result) {
-		if (findErr) throw findErr;
-		console.log(result);
-	});
-};
+// 	db.collection('erc1155').findOne({}, function (findErr, result) {
+// 		if (findErr) throw findErr;
+// 		console.log(result);
+// 	});
+// };
 
-function getAssetbyTopic(db, collection, topicIndex, assetID) {
+// function getAssetbyTopic(db, collection, topicIndex, assetID) {
     
-    var db = client.db('mzkz');
-    let query = ("topics." + topicIndex);
+//     var db = client.db('mzkz');
+//     let query = ("topics." + topicIndex);
 	
-	db.collection(collection).find({"topics.1":assetID}, function (findErr, result) {
-		if (findErr) throw findErr;
-		console.log(result);
-	});
-};
+// 	db.collection(collection).find({"topics.1":assetID}, function (findErr, result) {
+// 		if (findErr) throw findErr;
+// 		console.log(result);
+// 	});
+// };
 
 /**
  * getCurrBlockNumber() uses web3 to fetch the latest 
