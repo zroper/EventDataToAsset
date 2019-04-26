@@ -983,7 +983,7 @@ async function setURIparser(events) {
 								"slug": fungibilitySlug
 							},
 							{
-								"id": 7860,
+								"id": 14243,
 								"name": "Token Requires Approval",
 								"slug": "token-requires-approval"
 							}
@@ -1224,7 +1224,7 @@ async function setURIparser(events) {
 								"slug": fungibilitySlug
 							},
 							{
-								"id": 7860,
+								"id": 14243,
 								"name": "Token Requires Approval",
 								"slug": "token-requires-approval"
 							}
@@ -1464,7 +1464,7 @@ async function setURIparser(events) {
 								"slug": fungibilitySlug
 							},
 							{
-								"id": 7860,
+								"id": 14243,
 								"name": "Token Requires Approval",
 								"slug": "token-requires-approval"
 							}
