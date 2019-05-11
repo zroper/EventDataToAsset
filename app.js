@@ -179,7 +179,7 @@ async function startWatching() {
 
 	while (watching) {
 		await watchEvents();
-		wait(100);
+		wait(1000);
 	}
 }
 
@@ -193,7 +193,7 @@ async function watchEvents() {
 	let currBlockNumber = await getCurrBlockNumber();
 	let latestCompleteBlock = currBlockNumber - 1;
 	//let genBlock = 6043439; //ERC-1155 contract creation at txn:0x6e653115cacb3b8b226f6eff9234320c4e5f4e88e0988df2957a3bbca83ccb1b
-	let blockInterval = 2;
+	let blockInterval = 10;
 	
 	//console.log(currBlockNumber, lastBlockNumber,blockInterval);	
 	
@@ -510,7 +510,7 @@ async function createAssetParser(events) {
 			// ],
 			"meta_data": [
 				// {
-				// 	"id": 834582,
+				// 	"id": 961398,
 				// 	"key": "fifu_image_url",
 				// 	"value": "https:\/\/mzkz.xyz\/wp-content\/uploads\/2019\/03\/TokenInDev_Placeholder.png"
 				// },
@@ -825,7 +825,7 @@ async function mintAssetParser(events) {
 			// ],
 			// "meta_data": [
 			// 	{
-			// 		"id": 834582,
+			// 		"id": 961398,
 			// 		"key": "fifu_image_url",
 			// 		"value": "https:\/\/mzkz.xyz\/wp-content\/uploads\/2019\/03\/TokenInDev_Placeholder.png"
 			// 	},
@@ -1003,42 +1003,42 @@ async function setURIparser(events) {
 						//   ],
 						"meta_data": [
 							{
-								"id": 834582,
+								"id": 961398,
 								"key": "fifu_image_url",
 								"value": URIassetImageURL
 							},
 							{
-								"id": 836863,
+								"id": 961399,
 								"key": "_wcj_custom_product_tabs_title_local_1",
 								"value": "Image URL"
 							},
 							{
-								"id": 836864,
+								"id": 961400,
 								"key": "_wcj_custom_product_tabs_key_local_1",
 								"value": "local_1"
 							},
 							{
-								"id": 836865,
+								"id": 961401,
 								"key": "_wcj_custom_product_tabs_priority_local_1",
 								"value": "50"
 							},
 							{
-								"id": 836866,
+								"id": 961402,
 								"key": "_wcj_custom_product_tabs_content_local_1",
 								"value": URIassetImageURL
 							},
 							{
-								"id": 836867,
+								"id": 961403,
 								"key": "_wcj_custom_product_tabs_link_local_1",
 								"value": ""
 							},
 							{
-								"id": 836868,
+								"id": 961404,
 								"key": "_wcj_custom_product_tabs_link_new_tab_local_1",
 								"value": "no"
 							},
 							{
-								"id": 836869,
+								"id": 961405,
 								"key": "_wcj_custom_product_tabs_local_total_number",
 								"value": "1"
 							}
@@ -1244,42 +1244,42 @@ async function setURIparser(events) {
 						//   ],
 						"meta_data": [
 							{
-								"id": 834582,
+								"id": 961398,
 								"key": "fifu_image_url",
 								"value": URIassetImageURL
 							},
 							{
-								"id": 836863,
+								"id": 961399,
 								"key": "_wcj_custom_product_tabs_title_local_1",
 								"value": "Image URL"
 							},
 							{
-								"id": 836864,
+								"id": 961400,
 								"key": "_wcj_custom_product_tabs_key_local_1",
 								"value": "local_1"
 							},
 							{
-								"id": 836865,
+								"id": 961401,
 								"key": "_wcj_custom_product_tabs_priority_local_1",
 								"value": "50"
 							},
 							{
-								"id": 836866,
+								"id": 961402,
 								"key": "_wcj_custom_product_tabs_content_local_1",
 								"value": URIassetImageURL
 							},
 							{
-								"id": 836867,
+								"id": 961403,
 								"key": "_wcj_custom_product_tabs_link_local_1",
 								"value": ""
 							},
 							{
-								"id": 836868,
+								"id": 961404,
 								"key": "_wcj_custom_product_tabs_link_new_tab_local_1",
 								"value": "no"
 							},
 							{
-								"id": 836869,
+								"id": 961405,
 								"key": "_wcj_custom_product_tabs_local_total_number",
 								"value": "1"
 							}
@@ -1484,42 +1484,42 @@ async function setURIparser(events) {
 						//   ],
 						"meta_data": [
 							{
-								"id": 834582,
+								"id": 961398,
 								"key": "fifu_image_url",
 								"value": URIassetImageURL
 							},
 							{
-								"id": 836863,
+								"id": 961399,
 								"key": "_wcj_custom_product_tabs_title_local_1",
 								"value": "Image URL"
 							},
 							{
-								"id": 836864,
+								"id": 961400,
 								"key": "_wcj_custom_product_tabs_key_local_1",
 								"value": "local_1"
 							},
 							{
-								"id": 836865,
+								"id": 961401,
 								"key": "_wcj_custom_product_tabs_priority_local_1",
 								"value": "50"
 							},
 							{
-								"id": 836866,
+								"id": 961402,
 								"key": "_wcj_custom_product_tabs_content_local_1",
 								"value": URIassetImageURL
 							},
 							{
-								"id": 836867,
+								"id": 961403,
 								"key": "_wcj_custom_product_tabs_link_local_1",
 								"value": ""
 							},
 							{
-								"id": 836868,
+								"id": 961404,
 								"key": "_wcj_custom_product_tabs_link_new_tab_local_1",
 								"value": "no"
 							},
 							{
-								"id": 836869,
+								"id": 961405,
 								"key": "_wcj_custom_product_tabs_local_total_number",
 								"value": "1"
 							}
