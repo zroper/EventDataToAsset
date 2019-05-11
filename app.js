@@ -179,7 +179,7 @@ async function startWatching() {
 
 	while (watching) {
 		await watchEvents();
-		wait(1000);
+		wait(100);
 	}
 }
 
@@ -193,7 +193,7 @@ async function watchEvents() {
 	let currBlockNumber = await getCurrBlockNumber();
 	let latestCompleteBlock = currBlockNumber - 1;
 	//let genBlock = 6043439; //ERC-1155 contract creation at txn:0x6e653115cacb3b8b226f6eff9234320c4e5f4e88e0988df2957a3bbca83ccb1b
-	let blockInterval = 10;
+	let blockInterval = 2;
 	
 	//console.log(currBlockNumber, lastBlockNumber,blockInterval);	
 	
