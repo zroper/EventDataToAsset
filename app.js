@@ -211,7 +211,7 @@ async function watchEvents() {
 			//var collection = "erc1155Events_create";
 			//console.log(events)
             //updateDDBFromEvents(db,collection,events);
-            createAssetParser(events)
+            // createAssetParser(events)
 		 });
 		
 		eventsMelt.then(function(events) {
