@@ -211,7 +211,7 @@ async function watchEvents() {
 			//var collection = "erc1155Events_create";
 			//console.log(events)
             //updateDDBFromEvents(db,collection,events);
-            // createAssetParser(events)
+            createAssetParser(events)
 		 });
 		
 		eventsMelt.then(function(events) {
@@ -515,22 +515,22 @@ async function createAssetParser(events) {
 				// 	"value": "https:\/\/mzkz.xyz\/wp-content\/uploads\/2019\/03\/TokenInDev_Placeholder.png"
 				// },
 				{
-					"id": 834583,
+					"id": 958764,
 					"key": "_cryptocurrency_product_for_woocommerce_cryptocurrency_product_type",
 					"value": "yes"
 				},
 				{
-					"id": 834584,
+					"id": 958765,
 					"key": "_select_cryptocurrency_option",
 					"value": "ERC1155"
 				},
         {
-            "id": 934702,
+            "id": 958766,
             "key": "_wcj_multicurrency_per_product_make_empty_ETH",
             "value": "yes"
         },
         {
-            "id": 936354,
+            "id": 958767,
             "key": "_wcj_multicurrency_per_product_make_empty_ENJ",
             "value": "yes"
         }
@@ -830,12 +830,12 @@ async function mintAssetParser(events) {
 			// 		"value": "https:\/\/mzkz.xyz\/wp-content\/uploads\/2019\/03\/TokenInDev_Placeholder.png"
 			// 	},
 			// 	{
-			// 		"id": 834583,
+			// 		"id": 958764,
 			// 		"key": "_cryptocurrency_product_for_woocommerce_cryptocurrency_product_type",
 			// 		"value": "yes"
 			// 	},
 			// 	{
-			// 		"id": 834584,
+			// 		"id": 958765,
 			// 		"key": "_select_cryptocurrency_option",
 			// 		"value": "ERC1155"
 			// 	}
